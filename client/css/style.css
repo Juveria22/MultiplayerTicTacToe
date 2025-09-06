@@ -114,10 +114,12 @@ body {
 
 #messages div.X {
     color: #ff6b81;
+    font-weight: bold;
 }
 
 #messages div.O {
     color: #6bd1ff;
+    font-weight: bold;
 }
 
 /* Input and Send Button */

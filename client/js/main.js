@@ -90,12 +90,11 @@ ws.onmessage = (event) => {
     if (data.type === 'chat' || data.type === 'message') {
         const div = document.createElement('div');
 
-        // Extract player symbol from message for broadcast like "X: Hello"
         const colonIndex = data.message.indexOf(':');
         if (colonIndex !== -1) {
-            const player = data.message.slice(0, colonIndex);
-            div.classList.add(player); // color text based on player
-            div.textContent = data.message.slice(colonIndex + 1).trim();
+            const player = data.message.slice(0, colonIndex); // "X" or "O"
+            div.classList.add(player); // apply CSS class
+            div.textContent = data.message; // keep "X: Hello"
         } else {
             div.textContent = data.message;
         }
@@ -103,8 +102,6 @@ ws.onmessage = (event) => {
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-
-
 
     if (data.type === 'error') {
         alert(data.message);
