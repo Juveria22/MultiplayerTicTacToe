@@ -51,6 +51,17 @@ ws.onmessage = (event) => {
                 }
             });
         });
+
+        document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('winning'));
+
+        // Add winning class if there’s a winner
+        if (data.winningLine && data.winner && data.winner !== 'Draw') {
+            data.winningLine.forEach(([r, c]) => {
+                const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
+                if (cell) cell.classList.add('winning');
+            });
+        }
+        
         if (data.winner) {
             status.textContent = data.winner === 'Draw' ? "It's a Draw!" : `Player ${data.winner} Wins!`;
         } else {

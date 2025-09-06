@@ -1,3 +1,9 @@
+@keyframes flashWin {
+    0%   { color: #FFD700; text-shadow: 0 0 6px #FFD700; transform: scale(1.1); }
+    50%  { color: #fff; text-shadow: none; transform: scale(1); }
+    100% { color: #FFD700; text-shadow: 0 0 6px #FFD700; transform: scale(1.1); }
+}
+
 /* ---------- General Page Styles ---------- */
 body {
     font-family: 'Poppins', sans-serif;
@@ -44,7 +50,23 @@ body {
 }
 
 .cell.O {
-    color: #6bd1ff; /* sky blue for player O */
+    color: #3e8af5; /* sky blue for player O */
+}
+
+@keyframes flashWin {
+    0%   { color: #FFD700; text-shadow: 0 0 6px #FFD700; transform: scale(1.1); }
+    50%  { color: #fff; text-shadow: none; transform: scale(1); }
+    100% { color: #FFD700; text-shadow: 0 0 6px #FFD700; transform: scale(1.1); }
+}
+
+.cell.winning {
+    text-decoration: line-through;
+    text-decoration-thickness: 4px;
+    text-decoration-color: #FFD700;
+    color: #FFD700 !important;
+    text-shadow: 0 0 6px #FFD700;
+    transform: scale(1.1);
+    animation: flashWin 0.8s ease-in-out 1; /* Play animation once */
 }
 
 /* ---------- Status / Turn Info ---------- */
@@ -91,7 +113,7 @@ body {
 }
 
 #messages div.O {
-    background-color: #6bd1ff; /* sky blue bubble */
+    background-color: #3e8af5; /* sky blue bubble */
     color: #fff;
     align-self: flex-end;
 }

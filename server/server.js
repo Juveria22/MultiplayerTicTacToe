@@ -24,10 +24,10 @@ function checkWin() {
     if (board[a[0]][a[1]] !== '' &&
         board[a[0]][a[1]] === board[b[0]][b[1]] &&
         board[a[0]][a[1]] === board[c[0]][c[1]]) {
-      return board[a[0]][a[1]];
+      return { winner: board[a[0]][a[1]], line};
     }
   }
-  return board.flat().includes('') ? null : 'Draw';
+    return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
 }
 
 function broadcast(data) {
@@ -56,14 +56,19 @@ wss.on('connection', (ws) => {
       if (player.symbol !== currentTurn || board[row][col] !== '') return;
 
       board[row][col] = currentTurn;
-      const winner = checkWin();
+
+      const result = checkWin();
+      const winner = result ? result.winner: null;
+      const winningLine = result ? result.line : [];
+
       currentTurn = currentTurn === 'X' ? 'O' : 'X';
 
       broadcast({
         type: 'update',
         board,
         currentTurn,
-        winner: winner ? winner : null
+        winner,
+        winningLine
       });
     }
 
