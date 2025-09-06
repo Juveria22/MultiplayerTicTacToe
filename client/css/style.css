@@ -24,6 +24,7 @@ body {
     background-color: #2c2c3c;
     padding: 10px;
     border-radius: 12px;
+    position: relative; /* needed for absolute winning line */
 }
 
 .cell {
@@ -59,15 +60,19 @@ body {
     100% { color: #FFD700; text-shadow: 0 0 6px #FFD700; transform: scale(1.1); }
 }
 
-.cell.winning {
-    text-decoration: line-through;
-    text-decoration-thickness: 4px;
-    text-decoration-color: #FFD700;
-    color: #FFD700 !important;
-    text-shadow: 0 0 6px #FFD700;
-    transform: scale(1.1);
-    animation: flashWin 0.8s ease-in-out 1; /* Play animation once */
+/* Winning line overlay */
+#winner-line {
+    position: absolute;
+    background-color: #FFD700; /* gold */
+    height: 6px;               /* thickness of line */
+    width: 0;                   /* set dynamically */
+    top: 0;
+    left: 0;
+    transform-origin: left center;
+    transition: all 0.3s ease;
+    pointer-events: none;       /* so it doesn’t block clicks */
 }
+
 
 /* ---------- Status / Turn Info ---------- */
 #status {
@@ -83,63 +88,58 @@ body {
     flex-direction: column;
     width: 220px;
     font-size: 0.9rem;
+    gap: 4px;
 }
 
 #messages {
     height: 320px;
-    border: 1px solid #444;
-    border-radius: 12px;
-    padding: 10px;
-    background-color: #2c2c3c;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    padding: 0;
 }
 
-/* Chat message bubble */
+/* Remove bubbles, just colored text */
 #messages div {
-    padding: 6px 10px;
-    border-radius: 12px;
-    max-width: 85%;
+    padding: 0;
+    border-radius: 0;
+    max-width: 100%;
     word-wrap: break-word;
 }
 
-/* Player message colors */
+/* Player colors */
 #messages div.X {
-    background-color: #ff6b81; /* soft pink bubble */
-    color: #fff;
-    align-self: flex-start;
+    color: #ff6b81; /* player X text color */
+    text-align: left;
 }
 
 #messages div.O {
-    background-color: #3e8af5; /* sky blue bubble */
-    color: #fff;
-    align-self: flex-end;
+    color: #6bd1ff; /* player O text color */
+    text-align: left;
 }
 
 /* Input and Send Button */
+/* Input and send button */
 #input {
     margin-top: 10px;
-    padding: 8px 10px;
+    padding: 8px;
     border-radius: 12px;
     border: none;
     outline: none;
     background-color: #3a3a4c;
     color: #f0f0f0;
-    font-family: 'Poppins', sans-serif;
 }
 
 #send {
     margin-top: 8px;
-    padding: 8px 10px;
+    padding: 8px;
     border-radius: 12px;
     border: none;
     cursor: pointer;
     background-color: #5c5c8a;
     color: #f0f0f0;
     font-weight: 600;
-    transition: background 0.2s;
 }
 
 #send:hover {

@@ -52,16 +52,33 @@ ws.onmessage = (event) => {
             });
         });
 
-        document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('winning'));
+        // ---------- WINNING LINE ----------
+        const winnerLineDiv = document.getElementById('winner-line');
 
-        // Add winning class if there’s a winner
+        // Clear old line
+        winnerLineDiv.style.width = '0';
+
         if (data.winningLine && data.winner && data.winner !== 'Draw') {
-            data.winningLine.forEach(([r, c]) => {
-                const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
-                if (cell) cell.classList.add('winning');
-            });
+            const [[r1, c1], [r2, c2]] = data.winningLine;
+
+            const cellSize = 100; // same as in CSS
+            const gap = 10;       // same as grid-gap in CSS
+
+            // Calculate position
+            const startX = c1 * (cellSize + gap) + cellSize / 2;
+            const startY = r1 * (cellSize + gap) + cellSize / 2;
+            const endX = c2 * (cellSize + gap) + cellSize / 2;
+            const endY = r2 * (cellSize + gap) + cellSize / 2;
+
+            const length = Math.hypot(endX - startX, endY - startY);
+            const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
+
+            winnerLineDiv.style.width = length + 'px';
+            winnerLineDiv.style.top = startY + 'px';
+            winnerLineDiv.style.left = startX + 'px';
+            winnerLineDiv.style.transform = `rotate(${angle}deg)`;
         }
-        
+
         if (data.winner) {
             status.textContent = data.winner === 'Draw' ? "It's a Draw!" : `Player ${data.winner} Wins!`;
         } else {
@@ -72,13 +89,21 @@ ws.onmessage = (event) => {
 
     if (data.type === 'chat' || data.type === 'message') {
         const div = document.createElement('div');
-        div.textContent = data.message;
-        if (data.player === 'X' || data.player === 'O') {
-            div.classList.add(data.player); // Add X or O class for color
+
+        // Extract player symbol from message for broadcast like "X: Hello"
+        const colonIndex = data.message.indexOf(':');
+        if (colonIndex !== -1) {
+            const player = data.message.slice(0, colonIndex);
+            div.classList.add(player); // color text based on player
+            div.textContent = data.message.slice(colonIndex + 1).trim();
+        } else {
+            div.textContent = data.message;
         }
+
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
 
 
     if (data.type === 'error') {

@@ -72,6 +72,26 @@ wss.on('connection', (ws) => {
       });
     }
 
+    if(winner) {
+      setTimeout(() => {
+        board = [
+          ['', '', ''],
+          ['', '', ''],
+          ['', '', '']
+        ];
+
+        currentTurn = 'X';
+        broadcast({
+          type: 'update',
+          board,
+          currentTurn,
+          winner: null,
+          winningLine: []
+        });
+        broadcast({ type: 'message', message: 'Game reset!' });
+      }, 3000); //wait 3 seconds before resetting
+    }
+
     if (data.type === 'chat') {
       broadcast({
           type: 'chat',
