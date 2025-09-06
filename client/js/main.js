@@ -45,6 +45,10 @@ ws.onmessage = (event) => {
             row.forEach((val, c) => {
                 const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
                 cell.textContent = val;
+                cell.classList.remove('X', 'O'); // Remove old classes
+                if (val === 'X' || val === 'O') {
+                    cell.classList.add(val); // Add class for color
+                }
             });
         });
         if (data.winner) {
@@ -54,12 +58,17 @@ ws.onmessage = (event) => {
         }
     }
 
+
     if (data.type === 'chat' || data.type === 'message') {
         const div = document.createElement('div');
         div.textContent = data.message;
+        if (data.player === 'X' || data.player === 'O') {
+            div.classList.add(data.player); // Add X or O class for color
+        }
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
 
     if (data.type === 'error') {
         alert(data.message);
