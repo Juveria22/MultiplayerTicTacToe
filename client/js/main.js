@@ -3,6 +3,12 @@ const ws = new WebSocket(
         ? 'ws://localhost:8080'
         : 'wss://multiplayertictactoe-xwzj.onrender.com'
 );
+
+//debugging
+ws.onopen = () => console.log("WebSocket connected!");
+ws.onerror = (err) => console.error("WebSocket error:", err);
+ws.onclose = () => console.log("WebSocket closed");
+
 let symbol = '';
 const gameDiv = document.getElementById('game');
 const status = document.getElementById('status');
@@ -87,20 +93,24 @@ ws.onmessage = (event) => {
     }
 
 
-    if (data.type === 'chat' || data.type === 'message') {
+    if (data.type === 'chat') {
         const div = document.createElement('div');
-
-        const colonIndex = data.message.indexOf(':');
-        if (colonIndex !== -1) {
-            const player = data.message.slice(0, colonIndex); // "X" or "O"
-            div.classList.add(player); // apply CSS class
-            div.textContent = data.message; // keep "X: Hello"
-        } else {
-            div.textContent = data.message;
-        }
-
+        const playerClass = data.player || 'system';
+        div.classList.add(playerClass);
+        div.textContent = `${data.player}: ${data.message}`;
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        console.log("Chat received:", data.player, data.message);
+    }
+
+
+    if (data.type === 'message') {
+        const div = document.createElement('div');
+        div.textContent = data.message; // system message
+        div.classList.add('system');
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        console.log("System message:", data.message);
     }
 
     if (data.type === 'error') {

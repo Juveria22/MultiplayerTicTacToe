@@ -70,7 +70,6 @@ wss.on('connection', (ws) => {
         winner,
         winningLine
       });
-    }
 
     if(winner) {
       setTimeout(() => {
@@ -91,11 +90,12 @@ wss.on('connection', (ws) => {
         broadcast({ type: 'message', message: 'Game reset!' });
       }, 3000); //wait 3 seconds before resetting
     }
+  }
 
     if (data.type === 'chat') {
       broadcast({
           type: 'chat',
-          player: player.symbol,   // <-- Add this
+          player: player.symbol,
           message: data.message
       });
     }
