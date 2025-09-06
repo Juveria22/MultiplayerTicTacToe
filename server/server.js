@@ -31,7 +31,11 @@ function checkWin() {
 }
 
 function broadcast(data) {
-  players.forEach(p => p.ws.send(JSON.stringify(data)));
+  players.forEach(p => {
+    if (p.ws.readyState === WebSocket.OPEN) {
+      p.ws.send(JSON.stringify(data));
+    }
+  });
 }
 
 wss.on('connection', (ws) => {
@@ -102,6 +106,7 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    console.log(`${player.symbol} disconnected`);
     players = players.filter(p => p.ws !== ws);
     board = [
       ['', '', ''],
