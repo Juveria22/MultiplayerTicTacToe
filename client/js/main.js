@@ -1,4 +1,8 @@
-const ws = new WebSocket('ws://localhost:8080');
+const ws = new WebSocket(
+    window.location.hostname === 'localhost'
+        ? 'ws://localhost:8080'
+        : 'wss://multiplayertictactoe-xwzj.onrender.com'
+);
 let symbol = '';
 const gameDiv = document.getElementById('game');
 const status = document.getElementById('status');
