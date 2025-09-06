@@ -38,6 +38,16 @@ sendBtn.addEventListener('click', () => {
     input.value = '';
 });
 
+input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const msg = input.value;
+        if (!msg) return;
+        ws.send(JSON.stringify({ type: 'chat', message: msg }));
+        input.value = '';
+    }
+});
+
+
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
