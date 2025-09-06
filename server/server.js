@@ -69,8 +69,9 @@ wss.on('connection', (ws) => {
 
     if (data.type === 'chat') {
       broadcast({
-        type: 'chat',
-        message: `${player.symbol}: ${data.message}`
+          type: 'chat',
+          player: player.symbol,   // <-- Add this
+          message: data.message
       });
     }
   });

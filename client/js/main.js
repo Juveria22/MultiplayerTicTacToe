@@ -44,10 +44,10 @@ ws.onmessage = (event) => {
         data.board.forEach((row, r) => {
             row.forEach((val, c) => {
                 const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
-                cell.textContent = val;
+                cell.textContent = val ? val.toUpperCase() : '';
                 cell.classList.remove('X', 'O'); // Remove old classes
-                if (val === 'X' || val === 'O') {
-                    cell.classList.add(val); // Add class for color
+                if (val && (val.toUpperCase() === 'X' || val.toUpperCase() === 'O')) {
+                    cell.classList.add(val.toUpperCase());
                 }
             });
         });
