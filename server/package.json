@@ -1,0 +1,12 @@
+{
+  "name": "multiplayer-tic-tac-toe",
+  "version": "1.0.0",
+  "description": "Web-based multiplayer Tic Tac Toe with chat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.13.0"
+  }
+}
