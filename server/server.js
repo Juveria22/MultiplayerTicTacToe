@@ -1,7 +1,8 @@
 const WebSocket = require('ws');
 
-const wss = new WebSocket.Server({ port: 8080 });
-console.log('Server running on ws://localhost:8080');
+const PORT = process.env.PORT || 8080; // fallback for local dev
+const wss = new WebSocket.Server({ port: PORT });
+console.log(`Server running on ws://localhost:${PORT}`);
 
 let players = [];
 let board = [
