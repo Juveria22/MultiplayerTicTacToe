@@ -10,6 +10,7 @@ ws.onerror = (err) => console.error("WebSocket error:", err);
 ws.onclose = () => console.log("WebSocket closed");
 
 let symbol = '';
+let matched = false; // Track if player has been matched
 const gameDiv = document.getElementById('game');
 const status = document.getElementById('status');
 const messagesDiv = document.getElementById('messages');
@@ -18,6 +19,10 @@ const sendBtn = document.getElementById('send');
 const winnerLineDiv = document.getElementById('winner-line');
 const cellSize = 100;
 const gap = 10;
+
+// Hide the board initially
+gameDiv.style.display = 'none';
+winnerLineDiv.style.display = 'none';
 
 // Create 3x3 board
 for (let r = 0; r < 3; r++) {
@@ -29,6 +34,7 @@ for (let r = 0; r < 3; r++) {
         gameDiv.appendChild(cell);
 
         cell.addEventListener('click', () => {
+            if (!matched) return; // prevent moves before match
             ws.send(JSON.stringify({ type: 'move', row: r, col: c }));
         });
     }
@@ -37,7 +43,7 @@ for (let r = 0; r < 3; r++) {
 // Send chat on button click or Enter key
 function sendChat() {
     const msg = input.value.trim();
-    if (!msg) return;
+    if (!msg || !matched) return;
     ws.send(JSON.stringify({ type: 'chat', message: msg }));
     input.value = '';
 }
@@ -52,14 +58,10 @@ function drawWinningLine(winningLine) {
     winnerLineDiv.style.width = '0'; // clear old line
     if (!winningLine || winningLine.length === 0) return;
 
-    const firstCell = document.querySelector('.cell');
-    if (!firstCell) return;
+    winnerLineDiv.style.display = 'block';
 
-    const cellSize = firstCell.offsetWidth;
     const grid = document.getElementById('game');
-    const gridStyle = window.getComputedStyle(grid);
-    const gap = parseInt(gridStyle.gap) || 0;
-    const padding = parseInt(gridStyle.padding) || 0;
+    const padding = parseInt(window.getComputedStyle(grid).padding);
 
     const rows = winningLine.map(([r, c]) => r);
     const cols = winningLine.map(([r, c]) => c);
@@ -67,27 +69,27 @@ function drawWinningLine(winningLine) {
     let startX, startY, endX, endY;
 
     if (rows.every(r => r === rows[0])) {
-        // Horizontal
+        // Horizontal win
         const r = rows[0];
-        startX = padding + 0;
-        endX = padding + 3 * cellSize + 2 * gap;
+        startX = padding;
+        endX = padding + 3 * (cellSize + gap) - gap;
         startY = endY = padding + r * (cellSize + gap) + cellSize / 2;
     } else if (cols.every(c => c === cols[0])) {
-        // Vertical
+        // Vertical win
         const c = cols[0];
-        startY = padding + 0;
-        endY = padding + 3 * cellSize + 2 * gap;
+        startY = padding;
+        endY = padding + 3 * (cellSize + gap) - gap;
         startX = endX = padding + c * (cellSize + gap) + cellSize / 2;
     } else {
-        // Diagonal
+        // Diagonal win
         if (rows[0] === cols[0]) {
-            // TL-BR
+            // Top-left to bottom-right
             startX = padding + cellSize / 2;
             startY = padding + cellSize / 2;
             endX = padding + 2 * (cellSize + gap) + cellSize / 2;
             endY = padding + 2 * (cellSize + gap) + cellSize / 2;
         } else {
-            // TR-BL
+            // Top-right to bottom-left
             startX = padding + 2 * (cellSize + gap) + cellSize / 2;
             startY = padding + cellSize / 2;
             endX = padding + cellSize / 2;
@@ -99,7 +101,6 @@ function drawWinningLine(winningLine) {
     const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
 
     winnerLineDiv.style.width = `${length}px`;
-    winnerLineDiv.style.height = '6px'; // thickness
     winnerLineDiv.style.top = `${startY}px`;
     winnerLineDiv.style.left = `${startX}px`;
     winnerLineDiv.style.transform = `rotate(${angle}deg)`;
@@ -111,7 +112,13 @@ ws.onmessage = (event) => {
 
     if (data.type === 'init') {
         symbol = data.symbol;
-        status.textContent = `You are Player ${symbol}`;
+        matched = true;
+
+        // Show board now that player is matched
+        gameDiv.style.display = 'grid';
+        winnerLineDiv.style.display = 'block';
+
+        status.innerHTML = `You are Player <strong>${symbol}</strong><br>Current turn: ${data.currentTurn || 'X'}`;
     }
 
     if (data.type === 'update') {
@@ -126,11 +133,7 @@ ws.onmessage = (event) => {
 
         drawWinningLine(data.winningLine);
 
-        if (data.winner) {
-            status.textContent = data.winner === 'Draw' ? "It's a Draw!" : `Player ${data.winner} Wins!`;
-        } else {
-            status.innerHTML = `You are Player <strong>${symbol}</strong><br>Current turn: ${data.currentTurn}`;
-        }
+        status.innerHTML = `You are Player <strong>${symbol}</strong><br>Current turn: ${data.currentTurn}`;
     }
 
     if (data.type === 'chat') {
@@ -144,7 +147,7 @@ ws.onmessage = (event) => {
     if (data.type === 'message') {
         const div = document.createElement('div');
         div.classList.add('system');
-        div.textContent = data.message;
+        div.innerHTML = data.message;
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }

@@ -4,123 +4,138 @@ const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`Server running on ws://localhost:${PORT}`);
 
-let xWins = 0;
-let oWins = 0;
+// ----- Game Data -----
+let waitingPlayer = null; // for matchmaking
+let sessions = []; // list of active games
 
-let players = [];
-let board = [
-  ['', '', ''],
-  ['', '', ''],
-  ['', '', '']
-];
-let currentTurn = 'X';
-let nextSymbol = 'X'; // For assigning new connections
+function createSession(player1, player2) {
+    const session = {
+        players: [player1, player2],
+        board: [
+            ['', '', ''],
+            ['', '', ''],
+            ['', '', '']
+        ],
+        currentTurn: 'X',
+        xWins: 0,
+        oWins: 0
+    };
 
-function checkWin() {
-  const lines = [
-    [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]],
-    [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]],
-    [[0,0],[1,1],[2,2]], [[0,2],[1,1],[2,0]]
-  ];
+    // Assign symbols
+    player1.symbol = 'X';
+    player2.symbol = 'O';
+    player1.session = session;
+    player2.session = session;
 
-  for (const line of lines) {
-    const [a,b,c] = line;
-    if (board[a[0]][a[1]] !== '' &&
-        board[a[0]][a[1]] === board[b[0]][b[1]] &&
-        board[a[0]][a[1]] === board[c[0]][c[1]]) {
-      return { winner: board[a[0]][a[1]], line };
+    sessions.push(session);
+
+    // Init messages
+    player1.ws.send(JSON.stringify({ type: 'init', symbol: 'X' }));
+    player2.ws.send(JSON.stringify({ type: 'init', symbol: 'O' }));
+
+    broadcast(session, { type: 'message', message: 'Game started!' });
+
+    return session;
+}
+
+function broadcast(session, data) {
+    session.players.forEach(p => {
+        if (p.ws.readyState === WebSocket.OPEN) p.ws.send(JSON.stringify(data));
+    });
+}
+
+function checkWin(board) {
+    const lines = [
+        [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]],
+        [[0,0],[1,0],[2,0]], [[0,1],[1,1],[2,1]], [[0,2],[1,2],[2,2]],
+        [[0,0],[1,1],[2,2]], [[0,2],[1,1],[2,0]]
+    ];
+    for (const line of lines) {
+        const [a,b,c] = line;
+        if (board[a[0]][a[1]] && board[a[0]][a[1]] === board[b[0]][b[1]] && board[a[0]][a[1]] === board[c[0]][c[1]]) {
+            return { winner: board[a[0]][a[1]], line };
+        }
     }
-  }
-
-  return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
+    return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
 }
 
-function broadcast(data) {
-  players.forEach(p => {
-    if (p.ws.readyState === WebSocket.OPEN) {
-      p.ws.send(JSON.stringify(data));
-    }
-  });
-}
-
-function resetGame() {
-  board = [
-    ['', '', ''],
-    ['', '', ''],
-    ['', '', '']
-  ];
-  currentTurn = 'X';
-  broadcast({ type: 'update', board, currentTurn, winner: null, winningLine: [] });
-  broadcast({ type: 'message', message: 'Game reset!' });
-}
-
+// ----- WebSocket connection -----
 wss.on('connection', (ws) => {
-  if (players.length >= 2) {
-    ws.send(JSON.stringify({ type: 'error', message: 'Game full' }));
-    ws.close();
-    return;
-  }
+    const player = { ws };
 
-  // Assign player symbol
-  const playerSymbol = nextSymbol;
-  nextSymbol = nextSymbol === 'X' ? 'O' : 'X';
-  const player = { ws, symbol: playerSymbol };
-  players.push(player);
-
-  ws.send(JSON.stringify({ type: 'init', symbol: playerSymbol }));
-  broadcast({ type: 'message', message: `Player ${playerSymbol} joined!` });
-
-  ws.on('message', (msg) => {
-    let data;
-    try {
-      data = JSON.parse(msg);
-    } catch (e) {
-      console.error("Invalid JSON:", msg);
-      return;
+    // Matchmaking
+    if (waitingPlayer === null) {
+        waitingPlayer = player;
+        ws.send(JSON.stringify({ type: 'message', message: 'Finding player...' }));
+    } else {
+        // Create new session
+        const session = createSession(waitingPlayer, player);
+        waitingPlayer = null;
     }
 
-    // Handle move
-    if (data.type === 'move') {
-      const { row, col } = data;
-      if (player.symbol !== currentTurn || board[row][col] !== '') return;
+    ws.on('message', (msg) => {
+        const data = JSON.parse(msg);
 
-      board[row][col] = currentTurn;
+        const session = player.session;
+        if (!session) return; // not matched yet
 
-      const result = checkWin();
-      const winner = result ? result.winner : null;
-      const winningLine = result ? result.line : [];
+        // Handle moves
+        if (data.type === 'move') {
+            const { row, col } = data;
+            if (player.symbol !== session.currentTurn || session.board[row][col] !== '') return;
 
-      // Switch turn if game not finished
-      if (!winner) {
-        currentTurn = currentTurn === 'X' ? 'O' : 'X';
-      }
+            session.board[row][col] = session.currentTurn;
 
-      broadcast({ type: 'update', board, currentTurn, winner, winningLine });
+            const result = checkWin(session.board);
+            const winner = result ? result.winner : null;
+            const winningLine = result ? result.line : [];
 
-      if (winner) {
-        if (winner === 'X') xWins++;
-        else if (winner === 'O') oWins++;
-        broadcast({ type: 'message', message: `Score: X ${xWins} - O ${oWins}` });
-        setTimeout(resetGame, 5000);
-      }
-    }
+            if (!winner) {
+                session.currentTurn = session.currentTurn === 'X' ? 'O' : 'X';
+            }
 
-    // Handle chat
-    if (data.type === 'chat') {
-      broadcast({
-        type: 'chat',
-        player: player.symbol,
-        message: data.message
-      });
-    }
-  });
+            broadcast(session, { type: 'update', board: session.board, currentTurn: session.currentTurn, winner, winningLine });
 
-  ws.on('close', () => {
-    console.log(`${player.symbol} disconnected`);
-    players = players.filter(p => p.ws !== ws);
+            if (winner) {
+                // update scores
+                if (winner === 'X') session.xWins++;
+                else if (winner === 'O') session.oWins++;
+                broadcast({
+                  type: 'message',
+                  message: `Score: <strong>X</strong>: ${session.xWins} - <strong>O</strong>: ${session.oWins}`
+                });
 
-    // Reset game if a player leaves
-    resetGame();
-    broadcast({ type: 'message', message: `Player ${player.symbol} left. Game reset.` });
-  });
+                // Reset board after delay
+                setTimeout(() => {
+                    session.board = [
+                        ['', '', ''],
+                        ['', '', ''],
+                        ['', '', '']
+                    ];
+                    session.currentTurn = 'X';
+                    broadcast(session, { type: 'update', board: session.board, currentTurn: session.currentTurn, winner: null, winningLine: [] });
+                }, 5000);
+            }
+        }
+
+        // Handle chat
+        if (data.type === 'chat') {
+            broadcast(session, { type: 'chat', player: player.symbol, message: data.message });
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('Player disconnected');
+        if (player.session) {
+            const session = player.session;
+            session.players = session.players.filter(p => p !== player);
+            if (session.players.length > 0) {
+                broadcast(session, { type: 'message', message: 'Opponent left. Game reset.' });
+            }
+            sessions = sessions.filter(s => s !== session);
+        }
+
+        // if waiting player disconnected
+        if (waitingPlayer === player) waitingPlayer = null;
+    });
 });
