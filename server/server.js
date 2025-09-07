@@ -4,6 +4,9 @@ const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`Server running on ws://localhost:${PORT}`);
 
+let xWins = 0;
+let oWins = 0;
+
 let players = [];
 let board = [
   ['', '', ''],
@@ -95,6 +98,9 @@ wss.on('connection', (ws) => {
       broadcast({ type: 'update', board, currentTurn, winner, winningLine });
 
       if (winner) {
+        if (winner === 'X') xWins++;
+        else if (winner === 'O') oWins++;
+        broadcast({ type: 'message', message: `Score: X ${xWins} - O ${oWins}` });
         setTimeout(resetGame, 5000);
       }
     }
