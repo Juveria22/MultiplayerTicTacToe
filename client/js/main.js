@@ -4,7 +4,7 @@ const ws = new WebSocket(
         : 'wss://multiplayertictactoe-xwzj.onrender.com'
 );
 
-//debugging
+// Debugging
 ws.onopen = () => console.log("WebSocket connected!");
 ws.onerror = (err) => console.error("WebSocket error:", err);
 ws.onclose = () => console.log("WebSocket closed");
@@ -15,6 +15,9 @@ const status = document.getElementById('status');
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
+const winnerLineDiv = document.getElementById('winner-line');
+const cellSize = 100;
+const gap = 10;
 
 // Create 3x3 board
 for (let r = 0; r < 3; r++) {
@@ -31,23 +34,71 @@ for (let r = 0; r < 3; r++) {
     }
 }
 
-sendBtn.addEventListener('click', () => {
-    const msg = input.value;
+// Send chat on button click or Enter key
+function sendChat() {
+    const msg = input.value.trim();
     if (!msg) return;
     ws.send(JSON.stringify({ type: 'chat', message: msg }));
     input.value = '';
-});
+}
 
+sendBtn.addEventListener('click', sendChat);
 input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        const msg = input.value;
-        if (!msg) return;
-        ws.send(JSON.stringify({ type: 'chat', message: msg }));
-        input.value = '';
-    }
+    if (e.key === 'Enter') sendChat();
 });
 
+// ---------- Winning Line Function ----------
+function drawWinningLine(winningLine) {
+    winnerLineDiv.style.width = '0'; // clear old line
+    if (!winningLine || winningLine.length === 0) return;
 
+    const grid = document.getElementById('game');
+    const padding = parseInt(window.getComputedStyle(grid).padding);
+
+    const rows = winningLine.map(([r, c]) => r);
+    const cols = winningLine.map(([r, c]) => c);
+
+    let startX, startY, endX, endY;
+
+    if (rows.every(r => r === rows[0])) {
+        // Horizontal win
+        const r = rows[0];
+        startX = padding;
+        endX = padding + 3 * (cellSize + gap) - gap;
+        startY = endY = padding + r * (cellSize + gap) + cellSize / 2;
+    } else if (cols.every(c => c === cols[0])) {
+        // Vertical win
+        const c = cols[0];
+        startY = padding;
+        endY = padding + 3 * (cellSize + gap) - gap;
+        startX = endX = padding + c * (cellSize + gap) + cellSize / 2;
+    } else {
+        // Diagonal win
+        if (rows[0] === cols[0]) {
+            // Top-left to bottom-right
+            startX = padding + cellSize / 2;
+            startY = padding + cellSize / 2;
+            endX = padding + 2 * (cellSize + gap) + cellSize / 2;
+            endY = padding + 2 * (cellSize + gap) + cellSize / 2;
+        } else {
+            // Top-right to bottom-left
+            startX = padding + 2 * (cellSize + gap) + cellSize / 2;
+            startY = padding + cellSize / 2;
+            endX = padding + cellSize / 2;
+            endY = padding + 2 * (cellSize + gap) + cellSize / 2;
+        }
+    }
+
+    const length = Math.hypot(endX - startX, endY - startY);
+    const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
+
+    winnerLineDiv.style.width = `${length}px`;
+    winnerLineDiv.style.top = `${startY}px`;
+    winnerLineDiv.style.left = `${startX}px`;
+    winnerLineDiv.style.transform = `rotate(${angle}deg)`;
+}
+
+// ---------- WebSocket Message Handler ----------
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
@@ -61,42 +112,12 @@ ws.onmessage = (event) => {
             row.forEach((val, c) => {
                 const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
                 cell.textContent = val ? val.toUpperCase() : '';
-                cell.classList.remove('X', 'O'); // Remove old classes
-                if (val && (val.toUpperCase() === 'X' || val.toUpperCase() === 'O')) {
-                    cell.classList.add(val.toUpperCase());
-                }
+                cell.classList.remove('X', 'O');
+                if (val) cell.classList.add(val.toUpperCase());
             });
         });
 
-        // ---------- WINNING LINE ----------
-        const winnerLineDiv = document.getElementById('winner-line');
-
-        // Clear old line
-        winnerLineDiv.style.width = '0';
-
-        if (data.winningLine && data.winner && data.winner !== 'Draw') {
-            const [[r1, c1], [r2, c2]] = data.winningLine;
-
-            const grid = document.getElementById('game');
-            const gridRect = grid.getBoundingClientRect(); // get actual size & position
-            const cellSize = 100; // same as in CSS
-            const gap = 10;       // same as CSS grid-gap
-
-            // Calculate start/end relative to grid
-            const startX = c1 * (cellSize + gap) + cellSize / 2;
-            const startY = r1 * (cellSize + gap) + cellSize / 2;
-            const endX = c2 * (cellSize + gap) + cellSize / 2;
-            const endY = r2 * (cellSize + gap) + cellSize / 2;
-
-            const length = Math.hypot(endX - startX, endY - startY);
-            const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
-
-            winnerLineDiv.style.width = `${length}px`;
-            winnerLineDiv.style.top = `${startY}px`;
-            winnerLineDiv.style.left = `${startX}px`;
-            winnerLineDiv.style.transform = `rotate(${angle}deg)`;
-        }
-
+        drawWinningLine(data.winningLine);
 
         if (data.winner) {
             status.textContent = data.winner === 'Draw' ? "It's a Draw!" : `Player ${data.winner} Wins!`;
@@ -105,25 +126,20 @@ ws.onmessage = (event) => {
         }
     }
 
-
     if (data.type === 'chat') {
         const div = document.createElement('div');
-        const playerClass = data.player || 'system';
-        div.classList.add(playerClass);
+        div.classList.add(data.player || 'system');
         div.textContent = `${data.player}: ${data.message}`;
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        console.log("Chat received:", data.player, data.message);
     }
-
 
     if (data.type === 'message') {
         const div = document.createElement('div');
-        div.textContent = data.message; // system message
         div.classList.add('system');
+        div.textContent = data.message;
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        console.log("System message:", data.message);
     }
 
     if (data.type === 'error') {
