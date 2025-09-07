@@ -140,8 +140,8 @@ wss.on('connection', (ws) => {
                 else if (winner === 'O') session.oWins++;
 
                 const scoreMessage = winner === 'Draw'
-                  ? "It's a Draw!"
-                  : `Score: <strong>X</strong>: ${session.xWins} - <strong>O</strong>: ${session.oWins}`;
+                  ? "It's a Draw! Game resetting..."
+                  : `Score: <strong>X</strong>: ${session.xWins} - <strong>O</strong>: ${session.oWins} Game resetting...`;
 
                 broadcast(session, {
                   type: 'message',
