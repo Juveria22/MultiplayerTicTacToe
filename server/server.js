@@ -33,7 +33,9 @@ function createSession(player1, player2) {
     player1.ws.send(JSON.stringify({ type: 'init', symbol: 'X' }));
     player2.ws.send(JSON.stringify({ type: 'init', symbol: 'O' }));
 
-    broadcast(session, { type: 'message', message: 'Game started!' });
+    broadcast(session, { type: 'message', message: 'Game found! Starting soon...' });
+
+    startCountdown(session);
 
     return session;
 }
@@ -76,7 +78,7 @@ function startCountdown(session) {
         if (count < 0) {
             clearInterval(interval);
             // Send initial board state to start game
-            broadcastToSession(session, {
+            broadcast(session, {
                 type: 'update',
                 board: session.board,
                 currentTurn: session.currentTurn,

@@ -121,6 +121,14 @@ ws.onmessage = (event) => {
         status.innerHTML = `You are Player <strong>${symbol}</strong><br>Current turn: ${data.currentTurn || 'X'}`;
     }
 
+    if (data.type === 'countdown') {
+        const div = document.createElement('div');
+        div.classList.add('system');
+        div.textContent = data.message;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
     if (data.type === 'update') {
         data.board.forEach((row, r) => {
             row.forEach((val, c) => {
@@ -148,14 +156,6 @@ ws.onmessage = (event) => {
         const div = document.createElement('div');
         div.classList.add('system');
         div.innerHTML = data.message;
-        messagesDiv.appendChild(div);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    if (data.type === 'countdown') {
-        const div = document.createElement('div');
-        div.classList.add('system');
-        div.textContent = data.message;
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
