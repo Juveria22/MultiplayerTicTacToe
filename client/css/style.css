@@ -59,13 +59,13 @@ body {
     position: absolute;
     background-color: #FFD700; /* gold */
     height: max;
-    width: 0; /* set dynamically */
+    width: 0;
     top: 0;
     left: 0;
     transform-origin: left center;
     transition: all 0.3s ease;
     pointer-events: none;
-    z-index: 10; /* make sure it’s above cells */
+    z-index: 10;
 }
 
 
@@ -83,7 +83,7 @@ body {
     display: flex;
     flex-direction: column;
     width: 240px;
-    height: 400px;       /* Force height */
+    height: 400px;
     font-size: 0.9rem;
     color: #f0f0f0;
     margin-left: 20px;
@@ -96,7 +96,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    background-color: #2e2e46; /* match background */
+    background-color: #2e2e46;
     border: 1px solid #444;
     border-radius: 8px;
     min-height: 200px;

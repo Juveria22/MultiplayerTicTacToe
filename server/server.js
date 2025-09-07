@@ -11,6 +11,7 @@ let board = [
   ['', '', '']
 ];
 let currentTurn = 'X';
+let nextSymbol = 'X'; // For assigning new connections
 
 function checkWin() {
   const lines = [
@@ -27,6 +28,7 @@ function checkWin() {
       return { winner: board[a[0]][a[1]], line };
     }
   }
+
   return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
 }
 
@@ -38,7 +40,16 @@ function broadcast(data) {
   });
 }
 
-let nextSymbol = 'X';
+function resetGame() {
+  board = [
+    ['', '', ''],
+    ['', '', ''],
+    ['', '', '']
+  ];
+  currentTurn = 'X';
+  broadcast({ type: 'update', board, currentTurn, winner: null, winningLine: [] });
+  broadcast({ type: 'message', message: 'Game reset!' });
+}
 
 wss.on('connection', (ws) => {
   if (players.length >= 2) {
@@ -47,6 +58,7 @@ wss.on('connection', (ws) => {
     return;
   }
 
+  // Assign player symbol
   const playerSymbol = nextSymbol;
   nextSymbol = nextSymbol === 'X' ? 'O' : 'X';
   const player = { ws, symbol: playerSymbol };
@@ -56,9 +68,15 @@ wss.on('connection', (ws) => {
   broadcast({ type: 'message', message: `Player ${playerSymbol} joined!` });
 
   ws.on('message', (msg) => {
-    const data = JSON.parse(msg);
+    let data;
+    try {
+      data = JSON.parse(msg);
+    } catch (e) {
+      console.error("Invalid JSON:", msg);
+      return;
+    }
 
-    // --- Handle move ---
+    // Handle move
     if (data.type === 'move') {
       const { row, col } = data;
       if (player.symbol !== currentTurn || board[row][col] !== '') return;
@@ -69,26 +87,18 @@ wss.on('connection', (ws) => {
       const winner = result ? result.winner : null;
       const winningLine = result ? result.line : [];
 
-      // Broadcast update **before switching turn** so clients see correct currentTurn
-      broadcast({ type: 'update', board, currentTurn, winner, winningLine });
-
+      // Switch turn if game not finished
       if (!winner) {
         currentTurn = currentTurn === 'X' ? 'O' : 'X';
       } else {
-        setTimeout(() => {
-          board = [
-            ['', '', ''],
-            ['', '', ''],
-            ['', '', '']
-          ];
-          currentTurn = 'X';
-          broadcast({ type: 'update', board, currentTurn, winner: null, winningLine: [] });
-          broadcast({ type: 'message', message: 'Game reset!' });
-        }, 5000);
+        // Delay reset so players can see the winner
+        setTimeout(resetGame, 5000);
       }
     }
 
-    // --- Handle chat ---
+    broadcast({ type: 'update', board, currentTurn, winner, winningLine });
+
+    // Handle chat
     if (data.type === 'chat') {
       broadcast({
         type: 'chat',
@@ -101,13 +111,9 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log(`${player.symbol} disconnected`);
     players = players.filter(p => p.ws !== ws);
-    board = [
-      ['', '', ''],
-      ['', '', ''],
-      ['', '', '']
-    ];
-    currentTurn = 'X';
+
+    // Reset game if a player leaves
+    resetGame();
     broadcast({ type: 'message', message: `Player ${player.symbol} left. Game reset.` });
-    broadcast({ type: 'update', board, currentTurn, winner: null, winningLine: [] });
   });
 });
