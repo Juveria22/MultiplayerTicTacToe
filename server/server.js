@@ -92,7 +92,7 @@ wss.on('connection', (ws) => {
           winningLine: []
         });
         broadcast({ type: 'message', message: 'Game reset!' });
-      }, 3000); //wait 3 seconds before resetting
+      }, 8000); //wait 8 seconds before resetting
     }
   }
 

@@ -77,14 +77,16 @@ ws.onmessage = (event) => {
         if (data.winningLine && data.winner && data.winner !== 'Draw') {
             const [[r1, c1], [r2, c2]] = data.winningLine;
 
+            const grid = document.getElementById('game');
+            const gridPadding = 10;
             const cellSize = 100; // same as in CSS
             const gap = 10;       // same as grid-gap in CSS
 
             // Calculate position
-            const startX = c1 * (cellSize + gap) + cellSize / 2;
-            const startY = r1 * (cellSize + gap) + cellSize / 2;
-            const endX = c2 * (cellSize + gap) + cellSize / 2;
-            const endY = r2 * (cellSize + gap) + cellSize / 2;
+            const startX = gridPadding + c1 * (cellSize + gap) + cellSize / 2;
+            const startY = gridPadding + r1 * (cellSize + gap) + cellSize / 2;
+            const endX = gridPadding + c2 * (cellSize + gap) + cellSize / 2;
+            const endY = gridPadding + r2 * (cellSize + gap) + cellSize / 2;
 
             const length = Math.hypot(endX - startX, endY - startY);
             const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
