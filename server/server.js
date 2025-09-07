@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 
-const PORT = process.env.PORT || 8080; // fallback for local dev
+const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`Server running on ws://localhost:${PORT}`);
 
@@ -11,6 +11,7 @@ let board = [
   ['', '', '']
 ];
 let currentTurn = 'X';
+let nextSymbol = 'X'; // For assigning new connections
 
 function checkWin() {
   const lines = [
@@ -24,10 +25,11 @@ function checkWin() {
     if (board[a[0]][a[1]] !== '' &&
         board[a[0]][a[1]] === board[b[0]][b[1]] &&
         board[a[0]][a[1]] === board[c[0]][c[1]]) {
-      return { winner: board[a[0]][a[1]], line};
+      return { winner: board[a[0]][a[1]], line };
     }
   }
-    return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
+
+  return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
 }
 
 function broadcast(data) {
@@ -38,6 +40,17 @@ function broadcast(data) {
   });
 }
 
+function resetGame() {
+  board = [
+    ['', '', ''],
+    ['', '', ''],
+    ['', '', '']
+  ];
+  currentTurn = 'X';
+  broadcast({ type: 'update', board, currentTurn, winner: null, winningLine: [] });
+  broadcast({ type: 'message', message: 'Game reset!' });
+}
+
 wss.on('connection', (ws) => {
   if (players.length >= 2) {
     ws.send(JSON.stringify({ type: 'error', message: 'Game full' }));
@@ -45,7 +58,9 @@ wss.on('connection', (ws) => {
     return;
   }
 
-  const playerSymbol = players.length === 0 ? 'X' : 'O';
+  // Assign player symbol
+  const playerSymbol = nextSymbol;
+  nextSymbol = nextSymbol === 'X' ? 'O' : 'X';
   const player = { ws, symbol: playerSymbol };
   players.push(player);
 
@@ -53,8 +68,15 @@ wss.on('connection', (ws) => {
   broadcast({ type: 'message', message: `Player ${playerSymbol} joined!` });
 
   ws.on('message', (msg) => {
-    const data = JSON.parse(msg);
+    let data;
+    try {
+      data = JSON.parse(msg);
+    } catch (e) {
+      console.error("Invalid JSON:", msg);
+      return;
+    }
 
+    // Handle move
     if (data.type === 'move') {
       const { row, col } = data;
       if (player.symbol !== currentTurn || board[row][col] !== '') return;
@@ -62,45 +84,26 @@ wss.on('connection', (ws) => {
       board[row][col] = currentTurn;
 
       const result = checkWin();
-      const winner = result ? result.winner: null;
+      const winner = result ? result.winner : null;
       const winningLine = result ? result.line : [];
 
-      currentTurn = currentTurn === 'X' ? 'O' : 'X';
+      broadcast({ type: 'update', board, currentTurn, winner, winningLine });
 
-      broadcast({
-        type: 'update',
-        board,
-        currentTurn,
-        winner,
-        winningLine
-      });
-
-    if(winner) {
-      setTimeout(() => {
-        board = [
-          ['', '', ''],
-          ['', '', ''],
-          ['', '', '']
-        ];
-
-        currentTurn = 'X';
-        broadcast({
-          type: 'update',
-          board,
-          currentTurn,
-          winner: null,
-          winningLine: []
-        });
-        broadcast({ type: 'message', message: 'Game reset!' });
-      }, 8000); //wait 8 seconds before resetting
+      // Switch turn if game not finished
+      if (!winner) {
+        currentTurn = currentTurn === 'X' ? 'O' : 'X';
+      } else {
+        // Delay reset so players can see the winner
+        setTimeout(resetGame, 5000);
+      }
     }
-  }
 
+    // Handle chat
     if (data.type === 'chat') {
       broadcast({
-          type: 'chat',
-          player: player.symbol,
-          message: data.message
+        type: 'chat',
+        player: player.symbol,
+        message: data.message
       });
     }
   });
@@ -108,12 +111,9 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log(`${player.symbol} disconnected`);
     players = players.filter(p => p.ws !== ws);
-    board = [
-      ['', '', ''],
-      ['', '', ''],
-      ['', '', '']
-    ];
-    currentTurn = 'X';
+
+    // Reset game if a player leaves
+    resetGame();
     broadcast({ type: 'message', message: `Player ${player.symbol} left. Game reset.` });
   });
 });
