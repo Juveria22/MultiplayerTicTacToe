@@ -73,12 +73,13 @@ function startCountdown(session) {
         session.players.forEach(p => {
             if (p.ws.readyState === WebSocket.OPEN) {
                 p.ws.send(JSON.stringify({ type: 'countdown', message: `Game starting in ${count}...` }));
+            } else {
+                p.ws.send(JSON.stringify({ type: 'countdown', message: 'Game start!' }));
             }
         });
         count--;
         if (count < 0) {
             clearInterval(interval);
-            session.gameStarted = true;
             // Send initial board state to start game
             broadcast(session, {
                 type: 'update',
@@ -87,6 +88,8 @@ function startCountdown(session) {
                 winner: null,
                 winningLine: []
             });
+
+            session.gameStarted = true;
         }
     }, 1000);
 }
@@ -135,9 +138,14 @@ wss.on('connection', (ws) => {
                 // update scores
                 if (winner === 'X') session.xWins++;
                 else if (winner === 'O') session.oWins++;
+
+                const scoreMessage = winner === 'Draw'
+                  ? "It's a Draw!"
+                  : `Score: <strong>X</strong>: ${session.xWins} - <strong>O</strong>: ${session.oWins}`;
+
                 broadcast(session, {
                   type: 'message',
-                  message: `Score: <strong>X</strong>: ${session.xWins} - <strong>O</strong>: ${session.oWins}`
+                  message: scoreMessage
                 });
 
                 // Reset board after delay
