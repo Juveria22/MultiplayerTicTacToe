@@ -90,13 +90,14 @@ wss.on('connection', (ws) => {
       // Switch turn if game not finished
       if (!winner) {
         currentTurn = currentTurn === 'X' ? 'O' : 'X';
-      } else {
-        // Delay reset so players can see the winner
+      }
+
+      broadcast({ type: 'update', board, currentTurn, winner, winningLine });
+
+      if (winner) {
         setTimeout(resetGame, 5000);
       }
     }
-
-    broadcast({ type: 'update', board, currentTurn, winner, winningLine });
 
     // Handle chat
     if (data.type === 'chat') {
