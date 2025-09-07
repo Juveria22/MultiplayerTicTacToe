@@ -73,21 +73,21 @@ function startCountdown(session) {
         session.players.forEach(p => {
             if (p.ws.readyState === WebSocket.OPEN) {
                 p.ws.send(JSON.stringify({ type: 'countdown', message: `Game starting in ${count}...` }));
-            } else {
-                p.ws.send(JSON.stringify({ type: 'countdown', message: 'Game start!' }));
             }
         });
         count--;
         if (count < 0) {
             clearInterval(interval);
             session.gameStarted = true;
+            broadcast(session, { type: 'message', message: 'Game start!' });
             // Send initial board state to start game
             broadcast(session, {
                 type: 'update',
                 board: session.board,
                 currentTurn: session.currentTurn,
                 winner: null,
-                winningLine: []
+                winningLine: [],
+                gameStarted: true
             });
 
         }
