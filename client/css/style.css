@@ -58,13 +58,14 @@ body {
 #winner-line {
     position: absolute;
     background-color: #FFD700; /* gold */
-    height: 6px;               /* thickness of line */
-    width: 0;                   /* set dynamically */
+    height: max;
+    width: 0; /* set dynamically */
     top: 0;
     left: 0;
     transform-origin: left center;
     transition: all 0.3s ease;
-    pointer-events: none;       /* so it doesn’t block clicks */
+    pointer-events: none;
+    z-index: 10; /* make sure it’s above cells */
 }
 
 
