@@ -129,7 +129,7 @@ ws.onmessage = (event) => {
         if (data.winner) {
             status.textContent = data.winner === 'Draw' ? "It's a Draw!" : `Player ${data.winner} Wins!`;
         } else {
-            status.textContent = `You are Player <strong>${symbol}</strong><br>Current turn: ${data.currentTurn}`;
+            status.innerHTML = `You are Player <strong>${symbol}</strong><br>Current turn: ${data.currentTurn}`;
         }
     }
 
