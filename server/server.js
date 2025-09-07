@@ -80,6 +80,7 @@ function startCountdown(session) {
         count--;
         if (count < 0) {
             clearInterval(interval);
+            session.gameStarted = true;
             // Send initial board state to start game
             broadcast(session, {
                 type: 'update',
@@ -89,7 +90,6 @@ function startCountdown(session) {
                 winningLine: []
             });
 
-            session.gameStarted = true;
         }
     }, 1000);
 }
@@ -170,32 +170,29 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         console.log('Player disconnected');
         if (player.session) {
-          const session = player.session;
-          session.players = session.players.filter(p => p !== player);
+            const session = player.session;
+            
+            // Remove the leaving player
+            session.players = session.players.filter(p => p !== player);
 
-          // Reset board and turn
-          session.board = [
-              ['', '', ''],
-              ['', '', ''],
-              ['', '', '']
-          ];
-          session.currentTurn = 'X';
-          
-          if (session.players.length > 0) {
-              broadcast(session, {
-                  type: 'update',
-                  board: session.board,
-                  currentTurn: session.currentTurn,
-                  winner: null,
-                  winningLine: []
-              });
-              broadcast(session, { type: 'message', message: 'Opponent left. Game reset.' });
-          }
+            if (session.players.length === 1) {
+                // Pause the game
+                session.gameStarted = false;
 
-          sessions = sessions.filter(s => s !== session);
-      }
+                // Notify remaining player
+                broadcast(session, { type: 'message', message: 'Opponent left. Waiting for a new player...' });
 
-        // if waiting player disconnected
+                // Put remaining player back into waiting queue
+                waitingPlayer = session.players[0];
+                waitingPlayer.session = null; // clear their old session so new session can be created
+            }
+
+            // Remove old session from active sessions list
+            sessions = sessions.filter(s => s !== session);
+        }
+
+        // If waiting player disconnects
         if (waitingPlayer === player) waitingPlayer = null;
     });
+
 });

@@ -19,6 +19,8 @@ const sendBtn = document.getElementById('send');
 const winnerLineDiv = document.getElementById('winner-line');
 const cellSize = 100;
 const gap = 10;
+let gameStarted = false; // global variable
+
 
 // Hide the board initially
 gameDiv.style.display = 'none';
@@ -34,7 +36,7 @@ for (let r = 0; r < 3; r++) {
         gameDiv.appendChild(cell);
 
         cell.addEventListener('click', () => {
-            if (!matched) return; // prevent moves before match
+            if (!matched || !gameStarted) return; // prevent moves before match
             ws.send(JSON.stringify({ type: 'move', row: r, col: c }));
         });
     }
@@ -130,6 +132,7 @@ ws.onmessage = (event) => {
     }
 
     if (data.type === 'update') {
+        gameStarted = data.gameStarted || gameStarted;
         data.board.forEach((row, r) => {
             row.forEach((val, c) => {
                 const cell = document.querySelector(`.cell[data-row='${r}'][data-col='${c}']`);
