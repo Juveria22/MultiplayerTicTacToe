@@ -39,9 +39,12 @@ function createSession(player1, player2) {
 }
 
 function broadcast(session, data) {
+
+  if (session && session.players){
     session.players.forEach(p => {
         if (p.ws.readyState === WebSocket.OPEN) p.ws.send(JSON.stringify(data));
     });
+  }
 }
 
 function checkWin(board) {
@@ -58,6 +61,32 @@ function checkWin(board) {
     }
     return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
 }
+
+// countdown after connecting with a player
+
+function startCountdown(session) {
+    let count = 3;
+    const interval = setInterval(() => {
+        session.players.forEach(p => {
+            if (p.ws.readyState === WebSocket.OPEN) {
+                p.ws.send(JSON.stringify({ type: 'countdown', message: `Game starting in ${count}...` }));
+            }
+        });
+        count--;
+        if (count < 0) {
+            clearInterval(interval);
+            // Send initial board state to start game
+            broadcastToSession(session, {
+                type: 'update',
+                board: session.board,
+                currentTurn: session.currentTurn,
+                winner: null,
+                winningLine: []
+            });
+        }
+    }, 1000);
+}
+
 
 // ----- WebSocket connection -----
 wss.on('connection', (ws) => {
@@ -100,7 +129,7 @@ wss.on('connection', (ws) => {
                 // update scores
                 if (winner === 'X') session.xWins++;
                 else if (winner === 'O') session.oWins++;
-                broadcast({
+                broadcast(session, {
                   type: 'message',
                   message: `Score: <strong>X</strong>: ${session.xWins} - <strong>O</strong>: ${session.oWins}`
                 });

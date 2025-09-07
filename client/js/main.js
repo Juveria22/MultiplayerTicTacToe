@@ -152,6 +152,14 @@ ws.onmessage = (event) => {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
+    if (data.type === 'countdown') {
+        const div = document.createElement('div');
+        div.classList.add('system');
+        div.textContent = data.message;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
     if (data.type === 'error') {
         alert(data.message);
     }
