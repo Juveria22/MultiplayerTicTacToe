@@ -52,8 +52,14 @@ function drawWinningLine(winningLine) {
     winnerLineDiv.style.width = '0'; // clear old line
     if (!winningLine || winningLine.length === 0) return;
 
+    const firstCell = document.querySelector('.cell');
+    if (!firstCell) return;
+
+    const cellSize = firstCell.offsetWidth;
     const grid = document.getElementById('game');
-    const padding = parseInt(window.getComputedStyle(grid).padding);
+    const gridStyle = window.getComputedStyle(grid);
+    const gap = parseInt(gridStyle.gap) || 0;
+    const padding = parseInt(gridStyle.padding) || 0;
 
     const rows = winningLine.map(([r, c]) => r);
     const cols = winningLine.map(([r, c]) => c);
@@ -61,27 +67,27 @@ function drawWinningLine(winningLine) {
     let startX, startY, endX, endY;
 
     if (rows.every(r => r === rows[0])) {
-        // Horizontal win
+        // Horizontal
         const r = rows[0];
-        startX = padding;
-        endX = padding + 3 * (cellSize + gap) - gap;
+        startX = padding + 0;
+        endX = padding + 3 * cellSize + 2 * gap;
         startY = endY = padding + r * (cellSize + gap) + cellSize / 2;
     } else if (cols.every(c => c === cols[0])) {
-        // Vertical win
+        // Vertical
         const c = cols[0];
-        startY = padding;
-        endY = padding + 3 * (cellSize + gap) - gap;
+        startY = padding + 0;
+        endY = padding + 3 * cellSize + 2 * gap;
         startX = endX = padding + c * (cellSize + gap) + cellSize / 2;
     } else {
-        // Diagonal win
+        // Diagonal
         if (rows[0] === cols[0]) {
-            // Top-left to bottom-right
+            // TL-BR
             startX = padding + cellSize / 2;
             startY = padding + cellSize / 2;
             endX = padding + 2 * (cellSize + gap) + cellSize / 2;
             endY = padding + 2 * (cellSize + gap) + cellSize / 2;
         } else {
-            // Top-right to bottom-left
+            // TR-BL
             startX = padding + 2 * (cellSize + gap) + cellSize / 2;
             startY = padding + cellSize / 2;
             endX = padding + cellSize / 2;
@@ -93,6 +99,7 @@ function drawWinningLine(winningLine) {
     const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
 
     winnerLineDiv.style.width = `${length}px`;
+    winnerLineDiv.style.height = '6px'; // thickness
     winnerLineDiv.style.top = `${startY}px`;
     winnerLineDiv.style.left = `${startX}px`;
     winnerLineDiv.style.transform = `rotate(${angle}deg)`;
