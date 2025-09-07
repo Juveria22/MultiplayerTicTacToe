@@ -18,7 +18,8 @@ function createSession(player1, player2) {
         ],
         currentTurn: 'X',
         xWins: 0,
-        oWins: 0
+        oWins: 0,
+        gameStarted: false
     };
 
     // Assign symbols
@@ -77,6 +78,7 @@ function startCountdown(session) {
         count--;
         if (count < 0) {
             clearInterval(interval);
+            session.gameStarted = true;
             // Send initial board state to start game
             broadcast(session, {
                 type: 'update',
@@ -113,7 +115,9 @@ wss.on('connection', (ws) => {
         // Handle moves
         if (data.type === 'move') {
             const { row, col } = data;
+            if (!session.gameStarted) return; // ignore moves until countdown finishes
             if (player.symbol !== session.currentTurn || session.board[row][col] !== '') return;
+
 
             session.board[row][col] = session.currentTurn;
 
@@ -158,13 +162,30 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         console.log('Player disconnected');
         if (player.session) {
-            const session = player.session;
-            session.players = session.players.filter(p => p !== player);
-            if (session.players.length > 0) {
-                broadcast(session, { type: 'message', message: 'Opponent left. Game reset.' });
-            }
-            sessions = sessions.filter(s => s !== session);
-        }
+          const session = player.session;
+          session.players = session.players.filter(p => p !== player);
+
+          // Reset board and turn
+          session.board = [
+              ['', '', ''],
+              ['', '', ''],
+              ['', '', '']
+          ];
+          session.currentTurn = 'X';
+          
+          if (session.players.length > 0) {
+              broadcast(session, {
+                  type: 'update',
+                  board: session.board,
+                  currentTurn: session.currentTurn,
+                  winner: null,
+                  winningLine: []
+              });
+              broadcast(session, { type: 'message', message: 'Opponent left. Game reset.' });
+          }
+
+          sessions = sessions.filter(s => s !== session);
+      }
 
         // if waiting player disconnected
         if (waitingPlayer === player) waitingPlayer = null;
