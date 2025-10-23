@@ -11,9 +11,7 @@
     "concurrently": "^8.0.0"
   },
   "scripts": {
-    "start-server": "node server/server.js",
-    "start-client": "npx serve client",
-    "start": "concurrently \"npm run start-server\" \"npm run start-client\""
+    "start-server": "node server/server.js"
   },
   "repository": {
     "type": "git",
