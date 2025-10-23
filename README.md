@@ -1,4 +1,4 @@
-# Multiplayer Tic Tac Toe with Chat
+# 2-Player games <3
 
 ## Description
 A web-based 2-player game with real-time chat.
