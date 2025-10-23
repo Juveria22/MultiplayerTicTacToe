@@ -1,3 +1,4 @@
+/* winner line animation */
 @keyframes flashLine {
     0% {
         box-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700;
@@ -10,7 +11,7 @@
     }
 }
 
-/* ---------- General Page Styles ---------- */
+/* general styling */
 body {
     font-family: 'Poppins', sans-serif;
     background-color: #1e1e2f; /* Dark background */
@@ -22,7 +23,7 @@ body {
     flex-wrap: wrap;
 }
 
-/* ---------- Game Board Styles ---------- */
+/* tic tac toe game board */
 #game {
     display: grid;
     grid-template-columns: repeat(3, 100px);
@@ -30,7 +31,7 @@ body {
     background-color: #2c2c3c;
     padding: 10px;
     border-radius: 12px;
-    position: relative; /* needed for absolute winning line */
+    position: relative; 
 }
 
 .cell {
@@ -45,26 +46,26 @@ body {
     transition: background 0.2s, transform 0.1s;
 }
 
-/* Hover effect */
+/* cell hover effect */
 .cell:hover {
     background-color: #4e4e6c;
     transform: scale(1.05);
 }
 
-/* Player colors */
+/* player colors */
 .cell.X {
-    color: #ff6b81; /* soft pink for player X */
+    color: #ff6b81;
 }
 
 .cell.O {
-    color: #3e8af5; /* sky blue for player O */
+    color: #3e8af5;
 }
 
-/* Winning line overlay */
+/* winning line overlay */
 #winner-line {
     position: absolute;
-    background-color: #FFD700; /* gold */
-    height: 6px;               /* thickness of the line */
+    background-color: #FFD700;
+    height: 6px;
     width: 0;
     top: 0;
     left: 0;
@@ -78,7 +79,7 @@ body {
 }
 
 
-/* ---------- Status / Turn Info ---------- */
+/* status messages above tictactoe board */
 #status {
     text-align: center;
     margin-bottom: 15px;
@@ -86,8 +87,7 @@ body {
     font-size: 1.2rem;
 }
 
-/* ---------- Chat Panel ---------- */
-/* ---------- Chat Panel ---------- */
+/* chat */
 #chat {
     display: flex;
     flex-direction: column;
@@ -98,6 +98,7 @@ body {
     margin-left: 20px;
 }
 
+/* messages styling */
 #messages {
     flex: 1;
     overflow-y: auto;
@@ -120,6 +121,7 @@ body {
     text-align: left;
 }
 
+/* player and system colors*/
 #messages div.X {
     color: #ff6b81;
     font-weight: bold;
@@ -148,6 +150,7 @@ body {
 }
 
 #send {
+    margin: 0px;
     margin-top: 4px;
     padding: 6px 8px;
     border-radius: 12px;
@@ -155,9 +158,104 @@ body {
     cursor: pointer;
     background-color: #5c5c8a;
     color: #f0f0f0;
-    font-weight: 600;
+    font-weight:300;
 }
 
-#send:hover {
-    background-color: #7878b0;
+/* drawing game */
+#drawing-game {
+    display: none;
+    position: relative;
+    background-color: #1e1e2f; /* Dark background for canvas area */
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
+
+/* canvas styling */
+#drawing-canvas {
+    background-color: #2e2e46; /* Dark canvas background */
+    border: 1px solid #444;
+    border-radius: 8px;
+    cursor: crosshair;
+    display: block;
+    margin: 0 auto;
+}
+
+/* canvas controls */
+#drawing-game > div:first-of-type {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#color-picker, #brush-size {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #555;
+    background-color: #2e2e46;
+    color: #fff;
+}
+
+#clear-btn {
+    padding: 5px 10px;
+    background-color: #413a96;
+    cursor: pointer;
+}
+
+/* general button styling; game button options */
+button {
+    background-color: #3c3c5d;
+    color: #fff;
+    border: 2px;
+    border-color: #040406;
+    border-radius: 6px;
+    padding: 16px 16px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease;  /* smooth color change */
+    font-size: 16px;
+    margin: 10px;
+}
+
+button:hover {
+    background-color: #666;
+    transform: scale(1.05);
+}
+
+/* overlay styling "waiting for another player" */
+#drawing-waiting,
+#drawing-countdown {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    text-align: center;
+}
+
+/* countdown overlay */
+#drawing-countdown {
+    font-size: 48px;
+    z-index: 20;
+}
+
+#drawing-canvas {
+    background-color: #040406;
+    background-image: url('your-background-image.png');
+    background-size: cover;
+    background-position: center;
+    border: 1px solid #444;
+    border-radius: 8px;
+    cursor: crosshair;
+    display: block;
+    margin: 0 auto;
+}
+

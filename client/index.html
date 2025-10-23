@@ -1,28 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tic Tac Toe Multiplayer</title>
+  <title>Multiplayer Games</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div>
+  <!-- Tic Tac Toe Section -->
+  <div id="tic-tac-toe" style="display:none;">
     <h2 id="status">Connecting...</h2>
 
-    <!-- Game board container -->
     <div id="game-container" style="position: relative;">
-      <div id="game">
-        <div id="winner-line"></div> 
-      </div>
-      <!-- Winning line overlay -->
+      <div id="game"></div>
+      <div id="winner-line"></div>
     </div>
   </div>
 
+  <!-- Drawing Game Section -->
+  <div id="drawing-game" style="display:none; position: relative;">
+    <canvas id="drawing-canvas" width="600" height="400"></canvas>
+    <div>
+      <input type="color" id="color-picker" value="#FFFFFF">
+      <input type="range" id="brush-size" min="1" max="10" value="2">
+      <button id="clear-btn">Clear</button>
+    </div>
+
+    <!-- Overlay for waiting -->
+    <div id="drawing-waiting">Waiting for another player...</div>
+
+    <!-- Overlay for countdown -->
+    <div id="drawing-countdown"></div>
+  </div>
+
+  <!-- Buttons to switch games -->
+  <div style="margin: 20px 0;">
+    <button id="playttt" onclick="showGame('tic-tac-toe')">Play Tic Tac Toe</button>
+    <button id= "playdraw" onclick="showGame('drawing')">Play Drawing Game</button>
+  </div>
+
+  <!-- Chat Section -->
   <div id="chat">
     <div id="messages"></div>
     <input id="input" type="text" placeholder="Type message">
     <button id="send">Send</button>
   </div>
 
+  <!-- Scripts -->
   <script src="js/main.js"></script>
+  <script src="js/tictactoe.js"></script>
+  <script src="js/drawing.js"></script>
 </body>
 </html>

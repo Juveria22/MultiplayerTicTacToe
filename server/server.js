@@ -1,55 +1,50 @@
+//cd Server
+//npm install
+//node server.js
+const express = require('express');
+const path = require('path');
 const WebSocket = require('ws');
 
+const app = express();
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT });
-console.log(`Server running on ws://localhost:${PORT}`);
 
-// ----- Game Data -----
-let waitingPlayer = null; // for matchmaking
-let sessions = []; // list of active games
+// Serve client files
+app.use(express.static(path.join(__dirname, '../client')));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/index.html'));
+});
 
-function createSession(player1, player2) {
-    const session = {
-        players: [player1, player2],
-        board: [
-            ['', '', ''],
-            ['', '', ''],
-            ['', '', '']
-        ],
-        currentTurn: 'X',
-        xWins: 0,
-        oWins: 0,
-        gameStarted: false
-    };
+// Start HTTP server
+const server = app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
 
-    // Assign symbols
-    player1.symbol = 'X';
-    player2.symbol = 'O';
-    player1.session = session;
-    player2.session = session;
+// Attach WebSocket server to the same HTTP server
+const wss = new WebSocket.Server({ server });
+console.log(`WebSocket server running on ws://localhost:${PORT}`);
 
-    sessions.push(session);
+// Queues for each game
+const waitingPlayers = {
+    'tic-tac-toe': [],
+    'drawing': []
+};
 
-    // Init messages
-    player1.ws.send(JSON.stringify({ type: 'init', symbol: 'X' }));
-    player2.ws.send(JSON.stringify({ type: 'init', symbol: 'O' }));
+// Active sessions per game
+const sessions = {
+    'tic-tac-toe': [],
+    'drawing': []
+};
 
-    broadcast(session, { type: 'message', message: 'Game found! Starting soon...' });
-
-    startCountdown(session);
-
-    return session;
-}
-
+// Send data to all players in a session
 function broadcast(session, data) {
-
-  if (session && session.players){
     session.players.forEach(p => {
-        if (p.ws.readyState === WebSocket.OPEN) p.ws.send(JSON.stringify(data));
+        if (p.ws.readyState === WebSocket.OPEN) {
+            p.ws.send(JSON.stringify(data));
+        }
     });
-  }
 }
 
+// Tic Tac Toe win checking
 function checkWin(board) {
     const lines = [
         [[0,0],[0,1],[0,2]], [[1,0],[1,1],[1,2]], [[2,0],[2,1],[2,2]],
@@ -58,141 +53,218 @@ function checkWin(board) {
     ];
     for (const line of lines) {
         const [a,b,c] = line;
-        if (board[a[0]][a[1]] && board[a[0]][a[1]] === board[b[0]][b[1]] && board[a[0]][a[1]] === board[c[0]][c[1]]) {
+        if (board[a[0]][a[1]] &&
+            board[a[0]][a[1]] === board[b[0]][b[1]] &&
+            board[a[0]][a[1]] === board[c[0]][c[1]]) {
             return { winner: board[a[0]][a[1]], line };
         }
     }
     return board.flat().includes('') ? null : { winner: 'Draw', line: [] };
 }
 
-// countdown after connecting with a player
+// Create a session for two players
+function createSession(player1, player2, game) {
+    const session = { players: [player1, player2], gameStarted: false, game };
 
+    if (game === 'tic-tac-toe') {
+        session.board = [['','',''],['','',''],['','','']];
+        session.currentTurn = 'X';
+        player1.symbol = 'X';
+        player2.symbol = 'O';
+        session.xWins = 0;
+        session.oWins = 0;
+    }
+
+    player1.session = session;
+    player2.session = session;
+    sessions[game].push(session);
+
+    broadcast(session, { game, type: 'message', message: 'Game found! Starting soon...' });
+    startCountdown(session);
+}
+
+// Countdown before game starts
 function startCountdown(session) {
     let count = 3;
     const interval = setInterval(() => {
-        session.players.forEach(p => {
-            if (p.ws.readyState === WebSocket.OPEN) {
-                p.ws.send(JSON.stringify({ type: 'countdown', message: `Game starting in ${count}...` }));
-            }
+        broadcast(session, { 
+            game: session.game, 
+            type: 'countdown', 
+            message: `Game starting in ${count}...` 
         });
         count--;
         if (count < 0) {
             clearInterval(interval);
             session.gameStarted = true;
-            broadcast(session, { type: 'message', message: 'Game start!' });
-            // Send initial board state to start game
-            broadcast(session, {
-                type: 'update',
-                board: session.board,
-                currentTurn: session.currentTurn,
-                winner: null,
-                winningLine: [],
-                gameStarted: true
+
+            broadcast(session, { 
+                game: session.game, 
+                type: 'message', 
+                message: 'Game started!' 
             });
 
+            if (session.game === 'tic-tac-toe') {
+                // Assign symbols and send init to each player
+                session.players.forEach((p, i) => {
+                    const symbol = i === 0 ? 'X' : 'O';
+                    p.symbol = symbol; // save on server for move validation
+                    p.ws.send(JSON.stringify({
+                        game: 'tic-tac-toe',
+                        type: 'init',
+                        symbol,
+                        currentTurn: session.currentTurn,
+                        board: session.board,
+                        gameStarted: true
+                    }));
+                });
+
+                // Send initial board state to both players
+                broadcast(session, {
+                    game: 'tic-tac-toe',
+                    type: 'update',
+                    board: session.board,
+                    currentTurn: session.currentTurn,
+                    winner: null,
+                    winningLine: [],
+                    gameStarted: true
+                });
+            } else if (session.game === 'drawing') {
+                // start drawing message
+                broadcast(session, {
+                    game: 'drawing',
+                    type: 'init',
+                    message: 'Start drawing!',
+                    gameStarted: true
+                });
+            }
         }
     }, 1000);
 }
 
-
-// ----- WebSocket connection -----
+// Handle WebSocket connections
 wss.on('connection', (ws) => {
-    const player = { ws };
-
-    // Matchmaking
-    if (waitingPlayer === null) {
-        waitingPlayer = player;
-        ws.send(JSON.stringify({ type: 'message', message: 'Finding player...' }));
-    } else {
-        // Create new session
-        const session = createSession(waitingPlayer, player);
-        waitingPlayer = null;
-    }
+    const player = { ws, session: null, symbol: null, selectedGame: null };
 
     ws.on('message', (msg) => {
-        const data = JSON.parse(msg);
+        let data;
+        try { data = JSON.parse(msg); } 
+        catch (err) { console.error('Invalid JSON:', msg); return; }
 
-        const session = player.session;
-        if (!session) return; // not matched yet
-
-        // Handle moves
-        if (data.type === 'move') {
-            const { row, col } = data;
-            if (!session.gameStarted) return; // ignore moves until countdown finishes
-            if (player.symbol !== session.currentTurn || session.board[row][col] !== '') return;
-
-
-            session.board[row][col] = session.currentTurn;
-
-            const result = checkWin(session.board);
-            const winner = result ? result.winner : null;
-            const winningLine = result ? result.line : [];
-
-            if (!winner) {
-                session.currentTurn = session.currentTurn === 'X' ? 'O' : 'X';
-            }
-
-            broadcast(session, { type: 'update', board: session.board, currentTurn: session.currentTurn, winner, winningLine });
-
-            if (winner) {
-                // update scores
-                if (winner === 'X') session.xWins++;
-                else if (winner === 'O') session.oWins++;
-
-                const scoreMessage = winner === 'Draw'
-                  ? "It's a Draw! Game resetting..."
-                  : `Score: <strong>X</strong>: ${session.xWins} - <strong>O</strong>: ${session.oWins} Game resetting...`;
-
-                broadcast(session, {
-                  type: 'message',
-                  message: scoreMessage
-                });
-
-                // Reset board after delay
-                setTimeout(() => {
-                    session.board = [
-                        ['', '', ''],
-                        ['', '', ''],
-                        ['', '', '']
-                    ];
-                    session.currentTurn = 'X';
-                    broadcast(session, { type: 'update', board: session.board, currentTurn: session.currentTurn, winner: null, winningLine: [] });
-                }, 5000);
-            }
+        // 1. Player selects a game
+        if (data.type === 'selectGame' && data.game) {
+            player.selectedGame = data.game;
+            ws.send(JSON.stringify({ type: 'message', message: `You selected ${data.game}.` }));
+            return;
         }
 
-        // Handle chat
-        if (data.type === 'chat') {
-            broadcast(session, { type: 'chat', player: player.symbol, message: data.message });
+        // 2. Player clicks Join
+        if (data.type === 'join') {
+            if (!player.selectedGame) {
+                ws.send(JSON.stringify({ type: 'error', message: 'Please select a game before joining.' }));
+                return;
+            }
+
+            const game = player.selectedGame;
+            waitingPlayers[game].push(player);
+            ws.send(JSON.stringify({ game, type: 'message', message: 'Waiting for another player...' }));
+
+            if (waitingPlayers[game].length >= 2) {
+                const p1 = waitingPlayers[game].shift();
+                const p2 = waitingPlayers[game].shift();
+                createSession(p1, p2, game);
+            }
+            return;
+        }
+
+        // 3. Game moves / drawing
+        if (player.session) {
+            const session = player.session;
+
+            // Tic Tac Toe moves
+            if (session.game === 'tic-tac-toe' && data.type === 'move' && session.gameStarted) {
+                const { row, col } = data;
+                if (session.board[row][col] !== '' || player.symbol !== session.currentTurn) return;
+
+                session.board[row][col] = session.currentTurn;
+                const result = checkWin(session.board);
+                const winner = result ? result.winner : null;
+                const winningLine = result ? result.line : [];
+
+                if (!winner) session.currentTurn = session.currentTurn === 'X' ? 'O' : 'X';
+
+                broadcast(session, { game: 'tic-tac-toe', type: 'update', board: session.board, currentTurn: session.currentTurn, winner, winningLine, gameStarted: true});
+
+                if (winner) {
+                    if (winner === 'X') session.xWins++;
+                    else if (winner === 'O') session.oWins++;
+
+                    const scoreMessage = winner === 'Draw'
+                        ? "It's a Draw! Game resetting..."
+                        : `<strong>${winner}</strong> wins!<br>Score - X: ${session.xWins} | O: ${session.oWins}<br>Next round starting...`;
+
+                    broadcast(session, {
+                        type: 'message',
+                        message: scoreMessage
+                    });
+                    setTimeout(() => {
+                        session.board = [['','',''],['','',''],['','','']];
+                        session.currentTurn = 'X';
+                        broadcast(session, { game: 'tic-tac-toe', type: 'update', board: session.board, currentTurn: session.currentTurn, winner: null, winningLine: [], gameStarted: true });
+                    }, 5000);
+                }
+            }
+            if (data.type === 'chat') {
+                broadcast(session, { type: 'chat', player: player.symbol, message: data.message });
+            }
+
+            // 2️⃣ Handle 'clearOwn' first
+            if (data.type === 'clearOwn' && session.game === 'drawing') {
+                // Broadcast clearOwn to all other players except the sender
+                session.players.forEach(p => {
+                    if (p !== player && p.ws.readyState === WebSocket.OPEN) {
+                        p.ws.send(JSON.stringify({
+                            game: 'drawing',
+                            type: 'clearOwn',
+                            playerId: data.playerId
+                        }));
+                    }
+                });
+                return; // done handling
+            }
+
+
+
+            // Drawing events
+            if (session.game === 'drawing' && (data.type === 'drawing' || data.type === 'clear') && session.gameStarted) {
+                broadcast(session, data);
+            }
         }
     });
 
     ws.on('close', () => {
-        console.log('Player disconnected');
-        if (player.session) {
-            const session = player.session;
-            
-            // Remove the leaving player
-            session.players = session.players.filter(p => p !== player);
+        // Remove from waiting queue
+        Object.keys(waitingPlayers).forEach(game => {
+            waitingPlayers[game] = waitingPlayers[game].filter(p => p !== player);
+        });
 
-            if (session.players.length === 1) {
-                // Pause the game
-                session.gameStarted = false;
-
-                // Notify remaining player
-                broadcast(session, { type: 'message', message: 'Opponent left. Waiting for a new player...' });
-
-                // Put remaining player back into waiting queue
-                waitingPlayer = session.players[0];
-                waitingPlayer.session = null; // clear their old session so new session can be created
-            }
-
-            // Remove old session from active sessions list
-            sessions = sessions.filter(s => s !== session);
-        }
-
-        // If waiting player disconnects
-        if (waitingPlayer === player) waitingPlayer = null;
+        // Remove from sessions
+        Object.keys(sessions).forEach(game => {
+            sessions[game] = sessions[game].filter(sess => {
+                if (sess.players.includes(player)) {
+                    sess.players.forEach(p => {
+                        if (p !== player && p.ws.readyState === WebSocket.OPEN) {
+                            p.ws.send(JSON.stringify({ game, type: 'message', message: 'Opponent left. Waiting for a new player...' }));
+                            p.session = null;
+                            if (game === 'drawing') {
+                                p.ws.send(JSON.stringify({ game, type: 'clear' }));
+                            }
+                            waitingPlayers[game].push(p);
+                        }
+                    });
+                    return false;
+                }
+                return true;
+            });
+        });
     });
-
 });
