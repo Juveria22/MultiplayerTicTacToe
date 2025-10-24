@@ -1,6 +1,6 @@
 //cd Server
 //npm install
-//node server.js
+//node server/server.js
 const express = require('express');
 const path = require('path');
 const WebSocket = require('ws');
