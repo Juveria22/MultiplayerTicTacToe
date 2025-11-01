@@ -1,12 +1,13 @@
 {
-  "name": "multiplayer-tic-tac-toe",
+  "name": "tictactoe-server",
   "version": "1.0.0",
-  "description": "Web-based multiplayer Tic Tac Toe with chat",
+  "description": "Backend WebSocket + Express server for Tic Tac Toe.",
   "main": "server.js",
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.3"
+  },
   "scripts": {
     "start": "node server.js"
-  },
-  "dependencies": {
-    "ws": "^8.13.0"
   }
 }

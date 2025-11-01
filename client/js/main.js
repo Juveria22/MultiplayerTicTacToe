@@ -7,7 +7,7 @@
 
 // Automatically select ws:// or wss:// depending on environment
 const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-const wsUrl = `${protocol}://${window.location.host}`;
+const wsUrl = `${protocol}://multiplayertictactoe-xwzj.onrender.com`;
 const ws = new WebSocket(wsUrl);
 
 ws.onopen = () => console.log("✅ WebSocket connected!");
