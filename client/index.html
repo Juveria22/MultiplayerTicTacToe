@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neon Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;500;600;700&family=Bungee&family=Audiowide&family=Faster+One&family=Bungee+Shade&family=Wallpoet&family=Bowlby+One+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== BACKGROUND LAYERS (cosmetic, fixed) ===== -->
+  <div class="bg-gradient"></div>
+  <div class="bg-stars" id="bg-stars"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-sun"></div>
+  <div class="bg-scanlines"></div>
+  <div class="bg-vignette"></div>
+
+  <!-- moving sparkle layer that follows the cursor over empty background -->
+  <div class="star-layer" id="star-layer"></div>
+
+  <!-- root catches mousemove for the hover-sparkle effect -->
+  <div class="root" id="root">
+
+    <!-- =================== LOBBY =================== -->
+    <section class="lobby" id="lobby">
+
+      <header class="lobby-head">
+        <div>
+          <div class="insert-coin">●&nbsp; INSERT&nbsp;COIN</div>
+          <div class="title-row">
+            <div class="coin-slot" id="coin"></div>
+            <h1 class="arcade-title">ARCADE</h1>
+          </div>
+          <p class="subtitle">Two-player head-to-head games. Grab a friend, pick a game, talk smack in chat.</p>
+        </div>
+        <div class="head-right">
+          <div class="sound-pill" id="sound-lobby">
+            <span class="sound-ico">🔊</span><span class="sound-label">SFX ON</span>
+          </div>
+          <div class="conn-pill" id="conn">
+            <span class="conn-dot"></span>
+            <span class="conn-label">CONNECTING</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- mode toggle -->
+      <div class="mode-row">
+        <span class="mode-tag">MODE</span>
+        <div class="mode-toggle" id="gd-toggle">
+          <div class="mode-btn" id="mode-local">2P LOCAL</div>
+          <div class="mode-btn" id="mode-online">ONLINE</div>
+        </div>
+        <span class="mode-hint" id="mode-hint">Two players, one keyboard.</span>
+      </div>
+
+      <!-- game grid + geometry-dash runner -->
+      <div class="grid-wrap">
+        <div class="gd-smoke" id="gd-smoke"></div>
+        <div class="gd-runner" id="gd-runner"></div>
+        <div class="game-grid" id="game-grid"><!-- cabinets injected by main.js --></div>
+      </div>
+
+      <div class="lobby-foot">ARCADE · built on a WebSocket backend · <span>Every game plays online or local 2P</span></div>
+    </section>
+
+    <!-- =================== GAME SCREEN =================== -->
+    <section class="game-screen" id="game-screen" hidden>
+
+      <!-- top bar -->
+      <div class="topbar">
+        <div class="exit-btn" id="exit-btn">◂ EXIT</div>
+        <div class="game-id">
+          <div class="game-icon" id="game-icon"></div>
+          <div class="game-title" id="game-title">GAME</div>
+        </div>
+        <div class="topbar-right">
+          <div class="series" id="series" hidden>
+            <span class="series-tag">WINS</span>
+            <span class="series-p1"><span class="lbl">P1</span><span class="num" id="series-p1">0</span></span>
+            <span class="series-dot">·</span>
+            <span class="series-p2"><span class="num" id="series-p2">0</span><span class="lbl">P2</span></span>
+          </div>
+          <div class="mode-badge" id="mode-badge">🎮 LOCAL 2P</div>
+          <div class="sound-btn" id="sound-game">🔊</div>
+        </div>
+      </div>
+
+      <!-- body: board + chat -->
+      <div class="game-body">
+        <div class="board-area">
+          <div class="status" id="status"></div>
+          <div class="board" id="board"></div>
+
+          <!-- overlays -->
+          <div class="overlay waiting" id="ov-waiting" hidden>
+            <div class="spinner"></div>
+            <div class="ov-title">WAITING FOR<br>PLAYER 2…</div>
+            <div class="ov-sub">Share this page to matchmake online</div>
+          </div>
+          <div class="overlay countdown" id="ov-countdown" hidden>
+            <div class="count-num" id="count-num">3</div>
+          </div>
+          <div class="overlay winner" id="ov-winner" hidden>
+            <div class="win-kicker" id="win-kicker">GAME OVER</div>
+            <div class="win-text" id="win-text">PLAYER 1 WINS!</div>
+            <div class="win-actions">
+              <div class="btn-rematch" id="btn-rematch">↻ REMATCH</div>
+              <div class="btn-games" id="btn-games">GAMES</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- chat -->
+        <aside class="chat">
+          <div class="chat-head">▣ TRASH&nbsp;TALK</div>
+          <div class="chat-scroll" id="messages"></div>
+          <div class="chat-input-row">
+            <input id="chat-input" type="text" placeholder="say something…" autocomplete="off">
+            <div class="chat-send" id="chat-send">▸</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ===== SCRIPTS =====
+       main.js sets up the Arcade core + game registry.
+       Each game registers itself via Arcade.registerGame(id, module).
+       To add a new game: drop a js/games/<game>.js file and include it below. -->
+  <script src="js/main.js"></script>
+  <script src="js/games/tic-tac-toe.js"></script>
+  <script src="js/games/connect-four.js"></script>
+  <script src="js/games/rps.js"></script>
+  <script src="js/games/memory.js"></script>
+  <script src="js/games/sugar-rush.js"></script>
+</body>
+</html>
