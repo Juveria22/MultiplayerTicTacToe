@@ -50,11 +50,7 @@ A web-based multiplayer gaming platform featuring real-time gameplay and communi
 - Node.js
 - WebSocket (`ws` library)
 
-**Deployment**
 - Render (Frontend and Backend)
-
-## Project Structure
-
 ```
 neon-arcade/
 ├── server/
