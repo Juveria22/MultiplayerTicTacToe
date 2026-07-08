@@ -28,7 +28,7 @@ console.log(`WebSocket server running on ws://localhost:${PORT}`);
 // online game, add its id here and a block in createSession() + a move
 // handler in the message switch below.
 // ------------------------------------------------------------------
-const GAME_IDS = ['tic-tac-toe', 'drawing', 'connect-four', 'rps', 'memory', 'sugar'];
+const GAME_IDS = ['tic-tac-toe', 'drawing', 'connect-four', 'rps', 'memory', 'sugar', 'checkers', 'battleship', 'reversi', 'dots', 'pong', 'dressup'];
 
 const waitingPlayers = {};
 const sessions = {};
@@ -83,6 +83,244 @@ function checkWinC4(grid, r, c, sym) {
     return null;
 }
 
+// ------------------------------------------------------------------
+//  Checkers engine — board is 8x8 of '' | 'x'/'X' | 'o'/'O'
+//  (lowercase = man, uppercase = king). X = player 1 (moves up).
+// ------------------------------------------------------------------
+function ck_owner(v) { return !v ? null : (v === 'x' || v === 'X') ? 'X' : 'O'; }
+function ck_king(v) { return v === 'X' || v === 'O'; }
+function ck_opp(s) { return s === 'X' ? 'O' : 'X'; }
+function ck_inB(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+function ck_dirs(v) {
+    if (v === 'x') return [[-1, -1], [-1, 1]];
+    if (v === 'o') return [[1, -1], [1, 1]];
+    return [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+}
+function ck_jumps(b, r, c) {
+    const v = b[r][c]; if (!v) return [];
+    const me = ck_owner(v), out = [];
+    for (const d of ck_dirs(v)) {
+        const mr = r + d[0], mc = c + d[1], lr = r + 2*d[0], lc = c + 2*d[1];
+        if (ck_inB(lr, lc) && b[lr][lc] === '' && ck_inB(mr, mc)) {
+            const mid = b[mr][mc];
+            if (mid && ck_owner(mid) === ck_opp(me)) out.push({ to: [lr, lc], cap: [mr, mc] });
+        }
+    }
+    return out;
+}
+function ck_simple(b, r, c) {
+    const v = b[r][c]; if (!v) return [];
+    const out = [];
+    for (const d of ck_dirs(v)) {
+        const nr = r + d[0], nc = c + d[1];
+        if (ck_inB(nr, nc) && b[nr][nc] === '') out.push({ to: [nr, nc] });
+    }
+    return out;
+}
+function ck_hasJump(b, sym) {
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++)
+        if (ck_owner(b[r][c]) === sym && ck_jumps(b, r, c).length) return true;
+    return false;
+}
+function ck_hasMove(b, sym) {
+    if (ck_hasJump(b, sym)) return true;
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++)
+        if (ck_owner(b[r][c]) === sym && ck_simple(b, r, c).length) return true;
+    return false;
+}
+function ck_legal(b, r, c) {
+    const v = b[r][c]; if (!v) return [];
+    return ck_hasJump(b, ck_owner(v)) ? ck_jumps(b, r, c) : ck_simple(b, r, c);
+}
+function ck_promote(b, r, c) {
+    const v = b[r][c];
+    if (v === 'x' && r === 0) { b[r][c] = 'X'; return true; }
+    if (v === 'o' && r === 7) { b[r][c] = 'O'; return true; }
+    return false;
+}
+function ck_step(b, fr, fc, tr, tc) {
+    const v = b[fr][fc];
+    b[tr][tc] = v; b[fr][fc] = '';
+    const jumped = Math.abs(tr - fr) === 2;
+    if (jumped) b[(fr + tr) / 2][(fc + tc) / 2] = '';
+    const promoted = ck_promote(b, tr, tc);
+    const again = jumped && !promoted && ck_jumps(b, tr, tc).length > 0;
+    return { jumped, promoted, again };
+}
+function ck_fresh() {
+    const b = [];
+    for (let r = 0; r < 8; r++) {
+        const row = [];
+        for (let c = 0; c < 8; c++) {
+            const play = (r + c) % 2 === 1;
+            row.push(play && r < 3 ? 'o' : play && r > 4 ? 'x' : '');
+        }
+        b.push(row);
+    }
+    return b;
+}
+
+// ------------------------------------------------------------------
+//  Reversi / Othello engine — 8x8 of '' | 'X' | 'O'
+// ------------------------------------------------------------------
+const RV_DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+function rv_opp(s) { return s === 'X' ? 'O' : 'X'; }
+function rv_inB(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+function rv_fresh() {
+    const b = []; for (let r = 0; r < 8; r++) b.push(['','','','','','','','']);
+    b[3][3] = 'O'; b[3][4] = 'X'; b[4][3] = 'X'; b[4][4] = 'O';
+    return b;
+}
+function rv_flips(board, r, c, sym) {
+    if (board[r][c] !== '') return [];
+    let all = [];
+    for (const d of RV_DIRS) {
+        const line = []; let rr = r + d[0], cc = c + d[1];
+        while (rv_inB(rr, cc) && board[rr][cc] === rv_opp(sym)) { line.push([rr, cc]); rr += d[0]; cc += d[1]; }
+        if (line.length && rv_inB(rr, cc) && board[rr][cc] === sym) all = all.concat(line);
+    }
+    return all;
+}
+function rv_hasMove(board, sym) {
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++)
+        if (board[r][c] === '' && rv_flips(board, r, c, sym).length) return true;
+    return false;
+}
+function rv_counts(board) {
+    let x = 0, o = 0;
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) { if (board[r][c] === 'X') x++; else if (board[r][c] === 'O') o++; }
+    return { X: x, O: o };
+}
+
+// ------------------------------------------------------------------
+//  Dots & Boxes engine — N x N boxes = (N+1) x (N+1) dots.
+//  h[r][c] horizontal (r 0..N, c 0..N-1) · v[r][c] vertical (r 0..N-1, c 0..N)
+//  edge value '' undrawn | 'X' | 'O' ; boxes[r][c] owner or ''
+// ------------------------------------------------------------------
+const DT_NR = 7, DT_NC = 13;
+function dt_grid(rows, cols) { const g = []; for (let r = 0; r < rows; r++) { const row = []; for (let c = 0; c < cols; c++) row.push(''); g.push(row); } return g; }
+function dt_fresh() { return { h: dt_grid(DT_NR + 1, DT_NC), v: dt_grid(DT_NR, DT_NC + 1), boxes: dt_grid(DT_NR, DT_NC) }; }
+function dt_opp(s) { return s === 'X' ? 'O' : 'X'; }
+function dt_boxComplete(s, r, c) { return s.h[r][c] && s.h[r + 1][c] && s.v[r][c] && s.v[r][c + 1]; }
+function dt_boxesForEdge(kind, r, c) { return kind === 'h' ? [[r - 1, c], [r, c]] : [[r, c - 1], [r, c]]; }
+function dt_apply(s, kind, r, c, sym) {
+    (kind === 'h' ? s.h : s.v)[r][c] = sym;
+    let claimed = 0;
+    for (const b of dt_boxesForEdge(kind, r, c)) {
+        const br = b[0], bc = b[1];
+        if (br < 0 || bc < 0 || br >= DT_NR || bc >= DT_NC) continue;
+        if (!s.boxes[br][bc] && dt_boxComplete(s, br, bc)) { s.boxes[br][bc] = sym; claimed++; }
+    }
+    return claimed;
+}
+function dt_full(s) { for (let r = 0; r < DT_NR; r++) for (let c = 0; c < DT_NC; c++) if (!s.boxes[r][c]) return false; return true; }
+function dt_counts(s) { let x = 0, o = 0; for (let r = 0; r < DT_NR; r++) for (let c = 0; c < DT_NC; c++) { if (s.boxes[r][c] === 'X') x++; else if (s.boxes[r][c] === 'O') o++; } return { X: x, O: o }; }
+
+// ------------------------------------------------------------------
+//  Pong engine — authoritative real-time physics on a fixed 800x500
+//  logical field. Constants MUST match the client (js/games/pong.js).
+// ------------------------------------------------------------------
+const PG_W = 800, PG_H = 500, PG_PW = 15, PG_PH = 94, PG_BR = 9, PG_PADX = 28;
+const PG_PSPEED = 560, PG_BSP0 = 380, PG_BSPMAX = 800, PG_WIN = 7, PG_DT = 0.04;
+function pg_clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function pg_fresh() {
+    return {
+        x: PG_W / 2, y: PG_H / 2, vx: 0, vy: 0,
+        p1y: (PG_H - PG_PH) / 2, p2y: (PG_H - PG_PH) / 2,
+        s1: 0, s2: 0, dir1: 0, dir2: 0, winner: null,
+        launchAt: Date.now() + 800, serveDir: Math.random() < 0.5 ? 1 : -1
+    };
+}
+function pg_serve(p, dir) {
+    const ang = (Math.random() * 0.5 - 0.25);
+    p.vx = Math.cos(ang) * PG_BSP0 * dir;
+    p.vy = Math.sin(ang) * PG_BSP0;
+}
+function pg_bounce(p, py) {
+    const rel = pg_clamp((p.y - (py + PG_PH / 2)) / (PG_PH / 2), -1, 1);
+    const speed = Math.min(Math.hypot(p.vx, p.vy) * 1.06, PG_BSPMAX);
+    const ang = rel * (Math.PI * 0.40);
+    const dir = p.vx < 0 ? 1 : -1;
+    p.vx = dir * speed * Math.cos(ang);
+    p.vy = speed * Math.sin(ang);
+}
+function pg_tick(session) {
+    const p = session.pong; if (!p) return;
+    const now = Date.now();
+    if (!p.winner) {
+        // paddles
+        p.p1y = pg_clamp(p.p1y + p.dir1 * PG_PSPEED * PG_DT, 0, PG_H - PG_PH);
+        p.p2y = pg_clamp(p.p2y + p.dir2 * PG_PSPEED * PG_DT, 0, PG_H - PG_PH);
+        if (p.launchAt) {
+            if (now >= p.launchAt) { pg_serve(p, p.serveDir); p.launchAt = 0; }
+        } else {
+            p.x += p.vx * PG_DT; p.y += p.vy * PG_DT;
+            if (p.y < PG_BR) { p.y = PG_BR; p.vy = -p.vy; }
+            else if (p.y > PG_H - PG_BR) { p.y = PG_H - PG_BR; p.vy = -p.vy; }
+            if (p.vx < 0 && p.x - PG_BR <= PG_PADX + PG_PW && p.x - PG_BR >= PG_PADX - 6 &&
+                p.y >= p.p1y - PG_BR && p.y <= p.p1y + PG_PH + PG_BR) { p.x = PG_PADX + PG_PW + PG_BR; pg_bounce(p, p.p1y); }
+            if (p.vx > 0 && p.x + PG_BR >= PG_W - PG_PADX - PG_PW && p.x + PG_BR <= PG_W - PG_PADX + 6 &&
+                p.y >= p.p2y - PG_BR && p.y <= p.p2y + PG_PH + PG_BR) { p.x = PG_W - PG_PADX - PG_PW - PG_BR; pg_bounce(p, p.p2y); }
+            let scored = 0;
+            if (p.x < -PG_BR - 6) scored = 2;
+            else if (p.x > PG_W + PG_BR + 6) scored = 1;
+            if (scored) {
+                if (scored === 1) p.s1++; else p.s2++;
+                if (p.s1 >= PG_WIN) p.winner = 'X';
+                else if (p.s2 >= PG_WIN) p.winner = 'O';
+                else { p.x = PG_W / 2; p.y = PG_H / 2; p.vx = 0; p.vy = 0; p.serveDir = -p.serveDir; p.launchAt = now + 650; }
+            }
+        }
+    }
+    broadcast(session, {
+        game: 'pong', type: 'state',
+        x: Math.round(p.x), y: Math.round(p.y), vx: Math.round(p.vx), vy: Math.round(p.vy),
+        p1y: Math.round(p.p1y), p2y: Math.round(p.p2y), s1: p.s1, s2: p.s2, winner: p.winner
+    });
+    if (p.winner && !p.resetTimer) {
+        p.resetTimer = setTimeout(() => {
+            const f = pg_fresh();
+            session.pong = f;                       // keep the same loop running
+        }, 6000);
+    }
+}
+function pg_startLoop(session) {
+    if (session.pongLoop) clearInterval(session.pongLoop);
+    session.pongLoop = setInterval(() => pg_tick(session), PG_DT * 1000);
+}
+function pg_stopLoop(session) {
+    if (session.pongLoop) { clearInterval(session.pongLoop); session.pongLoop = null; }
+    if (session.pong && session.pong.resetTimer) { clearTimeout(session.pong.resetTimer); }
+}
+
+// ------------------------------------------------------------------
+//  Battleship engine — 10x10 boards. Cell '' water | 1..5 ship id.
+// ------------------------------------------------------------------
+const BS_N = 10;
+const BS_SHIPS = [
+    { id: 1, size: 5, name: 'CARRIER' }, { id: 2, size: 4, name: 'BATTLESHIP' },
+    { id: 3, size: 3, name: 'CRUISER' }, { id: 4, size: 3, name: 'SUB' }, { id: 5, size: 2, name: 'DESTROYER' }
+];
+function bs_emptyShots() { const g = []; for (let r = 0; r < BS_N; r++) g.push(Array(BS_N).fill('')); return g; }
+function bs_validBoard(b) {
+    if (!Array.isArray(b) || b.length !== BS_N) return false;
+    const counts = {};
+    for (let r = 0; r < BS_N; r++) {
+        if (!Array.isArray(b[r]) || b[r].length !== BS_N) return false;
+        for (let c = 0; c < BS_N; c++) { const v = b[r][c]; if (v !== '') counts[v] = (counts[v] || 0) + 1; }
+    }
+    for (const s of BS_SHIPS) if (counts[s.id] !== s.size) return false; // exact fleet
+    return true;
+}
+function bs_fleet() { return BS_SHIPS.map(s => ({ id: s.id, size: s.size, name: s.name, hits: 0, sunk: false })); }
+function bs_hit(fleet, board, r, c) {
+    const id = board[r][c]; if (!id) return { hit: false, sunk: null };
+    const ship = fleet.find(s => s.id === id);
+    ship.hits++;
+    return { hit: true, sunk: ship.hits >= ship.size ? ship.name : null };
+}
+function bs_allSunk(fleet) { return fleet.every(s => s.sunk); }
+
 // ==================================================================
 //  SESSION CREATION
 // ==================================================================
@@ -116,6 +354,27 @@ function createSession(player1, player2, game) {
         session.active = 'X';                // whose turn to play their round
         session.fills = { X: null, O: null };
         session.target = 38;
+    } else if (game === 'checkers') {
+        session.board = ck_fresh();
+        session.currentTurn = 'X';
+        session.continues = null;            // [r,c] mid multi-jump, or null
+    } else if (game === 'reversi') {
+        session.board = rv_fresh();
+        session.currentTurn = 'X';           // X (player 1) moves first
+    } else if (game === 'dots') {
+        const s = dt_fresh();
+        session.h = s.h; session.v = s.v; session.boxes = s.boxes;
+        session.currentTurn = 'X';           // X (player 1) draws first
+    } else if (game === 'pong') {
+        session.pong = pg_fresh();           // authoritative physics; loop starts in initGame
+    } else if (game === 'battleship') {
+        session.phase = 'place';
+        session.boards = { X: null, O: null };
+        session.fleets = { X: null, O: null };
+        session.shots = { X: bs_emptyShots(), O: bs_emptyShots() };
+        session.currentTurn = null;
+    } else if (game === 'dressup') {
+        session.chars = du_fresh();       // [figure0, figure1] — opaque char objects
     }
 
     player1.session = session;
@@ -152,11 +411,18 @@ function initGame(session) {
         else if (g === 'rps')          sendTo(p, { ...base, scores: session.scores });
         else if (g === 'memory')       sendTo(p, { ...base, currentTurn: session.currentTurn, scores: session.scores });
         else if (g === 'sugar')        sendTo(p, { ...base, active: session.active, target: session.target });
+        else if (g === 'checkers')     sendTo(p, { ...base, currentTurn: session.currentTurn, board: session.board });
+        else if (g === 'reversi')      sendTo(p, { ...base, currentTurn: session.currentTurn, board: session.board });
+        else if (g === 'dots')         sendTo(p, { ...base, currentTurn: session.currentTurn, h: session.h, v: session.v, boxes: session.boxes });
+        else if (g === 'pong')         sendTo(p, { ...base, W: PG_W, H: PG_H, pw: PG_PW, ph: PG_PH });
+        else if (g === 'battleship')   sendTo(p, { ...base, phase: 'place' });
+        else if (g === 'dressup')      sendTo(p, { ...base, chars: session.chars });
         else if (g === 'drawing')      sendTo(p, { ...base, message: 'Start drawing!' });
     });
     if (g === 'tic-tac-toe') {
         broadcast(session, { game: g, type: 'update', board: session.board, currentTurn: session.currentTurn, winner: null, winningLine: [], gameStarted: true });
     }
+    if (g === 'pong') { pg_startLoop(session); }
 }
 
 // ==================================================================
@@ -291,12 +557,190 @@ function handleSugar(session, player, data) {
     }
 }
 
+function handleCheckers(session, player, data) {
+    if (data.type !== 'move' || !session.gameStarted) return;
+    if (player.symbol !== session.currentTurn) return;
+    const from = data.from, to = data.to;
+    if (!Array.isArray(from) || !Array.isArray(to)) return;
+    if (!ck_inB(from[0], from[1]) || !ck_inB(to[0], to[1])) return;
+    // mid multi-jump: must keep moving the same piece
+    if (session.continues && (session.continues[0] !== from[0] || session.continues[1] !== from[1])) return;
+    const board = session.board;
+    if (ck_owner(board[from[0]][from[1]]) !== player.symbol) return;
+
+    // validate the destination is legal (mandatory-capture aware)
+    const dests = session.continues ? ck_jumps(board, from[0], from[1]) : ck_legal(board, from[0], from[1]);
+    if (!dests.some(d => d.to[0] === to[0] && d.to[1] === to[1])) return;
+
+    const res = ck_step(board, from[0], from[1], to[0], to[1]);
+
+    if (res.again) {
+        session.continues = [to[0], to[1]];
+        broadcast(session, { game: 'checkers', type: 'update', board, currentTurn: session.currentTurn, winner: null, continues: session.continues, captured: true });
+        return;
+    }
+    session.continues = null;
+    const next = ck_opp(session.currentTurn);
+    const winner = ck_hasMove(board, next) ? null : session.currentTurn;
+    if (!winner) session.currentTurn = next;
+    broadcast(session, { game: 'checkers', type: 'update', board, currentTurn: session.currentTurn, winner, continues: null, captured: res.jumped });
+    if (winner) {
+        setTimeout(() => {
+            session.board = ck_fresh();
+            session.currentTurn = 'X';
+            session.continues = null;
+            broadcast(session, { game: 'checkers', type: 'update', board: session.board, currentTurn: 'X', winner: null, continues: null });
+        }, 5000);
+    }
+}
+
+function handleReversi(session, player, data) {
+    if (data.type !== 'move' || !session.gameStarted) return;
+    if (player.symbol !== session.currentTurn) return;
+    const r = data.r, c = data.c;
+    if (!Number.isInteger(r) || !Number.isInteger(c) || !rv_inB(r, c)) return;
+    const board = session.board, sym = session.currentTurn;
+    const flips = rv_flips(board, r, c, sym);
+    if (!flips.length) return;                       // illegal move
+    board[r][c] = sym;
+    flips.forEach(p => { board[p[0]][p[1]] = sym; });
+
+    // next up: opponent if they can move, else mover (pass), else game over
+    let next = rv_opp(sym), passed = false, winner = null;
+    if (!rv_hasMove(board, next)) {
+        if (rv_hasMove(board, sym)) { next = sym; passed = true; }
+        else {
+            const cnt = rv_counts(board);
+            winner = cnt.X === cnt.O ? 'Draw' : (cnt.X > cnt.O ? 'X' : 'O');
+        }
+    }
+    if (!winner) session.currentTurn = next;
+    broadcast(session, { game: 'reversi', type: 'update', board, currentTurn: session.currentTurn, last: [r, c], flipped: flips, passed, winner });
+    if (winner) {
+        setTimeout(() => {
+            session.board = rv_fresh();
+            session.currentTurn = 'X';
+            broadcast(session, { game: 'reversi', type: 'update', board: session.board, currentTurn: 'X', last: null, flipped: null, passed: false, winner: null });
+        }, 6000);
+    }
+}
+
+function handleBattleship(session, player, data) {
+    const me = player.symbol, foe = me === 'X' ? 'O' : 'X';
+
+    // ---- placement ----
+    if (data.type === 'place' && session.phase === 'place') {
+        if (session.boards[me]) return;              // already placed
+        if (!bs_validBoard(data.board)) return;      // reject malformed fleets
+        session.boards[me] = data.board;
+        session.fleets[me] = bs_fleet();
+        const opp = opponentOf(session, player);
+        if (opp) sendTo(opp, { game: 'battleship', type: 'oppReady' });
+        if (session.boards.X && session.boards.O) {
+            session.phase = 'fire';
+            session.currentTurn = 'X';
+            broadcast(session, { game: 'battleship', type: 'begin', currentTurn: session.currentTurn });
+        }
+        return;
+    }
+
+    // ---- firing ----
+    if (data.type === 'fire' && session.phase === 'fire') {
+        if (me !== session.currentTurn) return;
+        const r = data.r, c = data.c;
+        if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || r >= BS_N || c < 0 || c >= BS_N) return;
+        if (session.shots[me][r][c] !== '') return;   // already fired here
+        const board = session.boards[foe];
+        const res = bs_hit(session.fleets[foe], board, r, c);
+        session.shots[me][r][c] = res.hit ? 'H' : 'M';
+        const win = res.hit && bs_allSunk(session.fleets[foe]);
+        if (!win) session.currentTurn = foe;          // pass the turn each shot
+        sendTo(player, { game: 'battleship', type: 'result', r, c, hit: res.hit, sunk: res.sunk, win, currentTurn: session.currentTurn });
+        const opp = opponentOf(session, player);
+        if (opp) sendTo(opp, { game: 'battleship', type: 'incoming', r, c, hit: res.hit, sunk: res.sunk, lose: win, currentTurn: session.currentTurn });
+        if (win) {
+            setTimeout(() => {
+                session.phase = 'place';
+                session.boards = { X: null, O: null };
+                session.fleets = { X: null, O: null };
+                session.shots = { X: bs_emptyShots(), O: bs_emptyShots() };
+                session.currentTurn = null;
+                broadcast(session, { game: 'battleship', type: 'reset' });
+            }, 6000);
+        }
+    }
+}
+
+function handleDots(session, player, data) {
+    if (data.type !== 'move' || !session.gameStarted) return;
+    if (player.symbol !== session.currentTurn) return;
+    const { kind, r, c } = data;
+    if (kind !== 'h' && kind !== 'v') return;
+    const grid = kind === 'h' ? session.h : session.v;
+    if (!Number.isInteger(r) || !Number.isInteger(c) || !grid[r] || grid[r][c] === undefined) return;
+    if (grid[r][c] !== '') return;                       // already drawn
+    const sym = session.currentTurn;
+    const claimed = dt_apply(session, kind, r, c, sym);
+    let winner = null;
+    if (dt_full(session)) {
+        const cnt = dt_counts(session);
+        winner = cnt.X === cnt.O ? 'Draw' : (cnt.X > cnt.O ? 'X' : 'O');
+    } else if (!claimed) {
+        session.currentTurn = dt_opp(sym);               // no box closed -> pass turn
+    }
+    broadcast(session, { game: 'dots', type: 'update', h: session.h, v: session.v, boxes: session.boxes, currentTurn: session.currentTurn, last: { kind, r, c }, claimed: claimed > 0, winner });
+    if (winner) {
+        setTimeout(() => {
+            const s = dt_fresh();
+            session.h = s.h; session.v = s.v; session.boxes = s.boxes; session.currentTurn = 'X';
+            broadcast(session, { game: 'dots', type: 'update', h: session.h, v: session.v, boxes: session.boxes, currentTurn: 'X', last: null, claimed: false, winner: null });
+        }, 6000);
+    }
+}
+
+function handlePong(session, player, data) {
+    if (data.type !== 'input' || !session.gameStarted || !session.pong) return;
+    const dir = data.dir === -1 || data.dir === 1 ? data.dir : 0;
+    if (player.symbol === 'X') session.pong.dir1 = dir;
+    else if (player.symbol === 'O') session.pong.dir2 = dir;
+}
+
+// ==================================================================
+//  DRESS UP  — co-op styling, no rules. Each player owns one figure
+//  (X = figure 0, O = figure 1). The server relays the full pair on
+//  every change; char objects are opaque (the client interprets them).
+// ==================================================================
+function du_char(body, hairCol, shirtCol, pantsCol, shoesCol, accCol) {
+    return { body, hair: null, hairCol, shirt: null, shirtCol, pants: null, pantsCol, shoes: null, shoesCol, acc: null, accCol };
+}
+function du_fresh() {
+    return [
+        du_char('#39ff8b', '#ff79c6', '#ff2d9b', '#2de2ff', '#ff2d9b', '#caff00'),
+        du_char('#ff79c6', '#b14bff', '#ffb000', '#2de2ff', '#caff00', '#2de2ff')
+    ];
+}
+function handleDressup(session, player, data) {
+    if (data.type !== 'dress' || !session.gameStarted) return;
+    // a player may only edit their OWN figure (X = 0, O = 1)
+    const mine = player.symbol === 'O' ? 1 : 0;
+    if (data.char !== mine) return;
+    if (!data.data || typeof data.data !== 'object') return;
+    session.chars[mine] = data.data;
+    broadcast(session, { game: 'dressup', type: 'update', chars: session.chars });
+}
+
 const MOVE_HANDLERS = {
     'tic-tac-toe': handleTTT,
+    'dressup': handleDressup,
     'connect-four': handleC4,
     'rps': handleRPS,
     'memory': handleMemory,
-    'sugar': handleSugar
+    'sugar': handleSugar,
+    'checkers': handleCheckers,
+    'battleship': handleBattleship,
+    'reversi': handleReversi,
+    'dots': handleDots,
+    'pong': handlePong
 };
 
 // ==================================================================
@@ -378,6 +822,7 @@ wss.on('connection', (ws) => {
         Object.keys(sessions).forEach(game => {
             sessions[game] = sessions[game].filter(sess => {
                 if (sess.players.includes(player)) {
+                    if (game === 'pong') pg_stopLoop(sess);
                     sess.players.forEach(p => {
                         if (p !== player && p.ws.readyState === WebSocket.OPEN) {
                             p.ws.send(JSON.stringify({ game, type: 'message', message: 'Opponent left. Waiting for a new player...' }));
