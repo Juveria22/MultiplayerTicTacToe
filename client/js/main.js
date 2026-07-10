@@ -716,7 +716,7 @@
     pill: pill,
     endRound: endRound, showWin: showWin,
     pushSys: pushSys, pushChat: pushChat,
-    hideWaiting: function () { document.getElementById('ov-waiting').hidden = true; }
+    hideWaiting: function () { document.getElementById('ov-waiting').hidden = true; document.getElementById('ov-countdown').hidden = true; }
   };
 
   /* ============================================================
