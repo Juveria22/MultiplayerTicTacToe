@@ -190,10 +190,6 @@ The application uses WebSocket connections to maintain real-time, bidirectional 
 3. Both clients update their game state simultaneously
 4. Turn tracking ensures proper game flow
 
-## License
-
-This project is open source and available under the MIT License.
-
 ---
 
 <div align="center">
