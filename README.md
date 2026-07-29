@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>Neon Arcade</h1>
+  <h1>Syncspace</h1>
   <p><strong>Real-Time Multiplayer Gaming Platform</strong></p>
 
   <p>
