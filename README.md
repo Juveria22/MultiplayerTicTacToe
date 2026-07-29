@@ -148,7 +148,7 @@ disconnect-handling are all shared and game-agnostic.
 
 ```bash
 # Clone the repository
-git clone https://github.com/Juveria22/MultiplayerTicTacToe.git
+git clone https://github.com/Juveria22/Syncspace.git
 cd MultiplayerTicTacToe
 
 # Install backend dependencies
