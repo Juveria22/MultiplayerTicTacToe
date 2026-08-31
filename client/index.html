@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;500;600;700&family=Bungee&family=Audiowide&family=Faster+One&family=Bungee+Shade&family=Wallpoet&family=Bowlby+One+SC&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&family=Bungee&family=Audiowide&family=Faster+One&family=Bungee+Shade&family=Wallpoet&family=Bowlby+One+SC&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -40,7 +40,7 @@
         </div>
         <div class="head-right">
           <div class="sound-pill" id="sound-lobby">
-            <span class="sound-ico">🔊</span><span class="sound-label">SFX ON</span>
+            <span class="sound-ico">ON</span><span class="sound-label">SFX ON</span>
           </div>
           <div class="conn-pill" id="conn">
             <span class="conn-dot"></span>
@@ -60,6 +60,16 @@
         <span class="mode-hint" id="mode-hint">Two players, one keyboard.</span>
       </div>
 
+      <!-- marquee bulb strip + pixel dressing -->
+      <div class="bulbs">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="pix-rule">
+        <span class="pix inline invader bob"></span>
+        <span>SELECT YOUR CABINET</span>
+        <span class="pix inline ghost bob2"></span>
+      </div>
+
       <!-- game grid + geometry-dash runner -->
       <div class="grid-wrap">
         <div class="gd-smoke" id="gd-smoke"></div>
@@ -67,6 +77,15 @@
         <div class="game-grid" id="game-grid"><!-- cabinets injected by main.js --></div>
       </div>
 
+      <div class="pix-march">
+        <span class="pix inline coin bob"></span>
+        <span class="pix inline alien2 bob2"></span>
+        <span class="pix inline rocket bob"></span>
+        <span class="pix inline heart bob2"></span>
+        <span class="pix inline invader bob"></span>
+        <span class="pix inline ghost bob2"></span>
+        <span class="pix inline coin bob"></span>
+      </div>
       <div class="lobby-foot">ARCADE · built on a WebSocket backend · <span>Every game plays on the web or local</span></div>
     </section>
 
@@ -87,8 +106,8 @@
             <span class="series-dot">·</span>
             <span class="series-p2"><span class="num" id="series-p2">0</span><span class="lbl">P2</span></span>
           </div>
-          <div class="mode-badge" id="mode-badge">🎮 LOCAL</div>
-          <div class="sound-btn" id="sound-game">🔊</div>
+          <div class="mode-badge" id="mode-badge">LOCAL</div>
+          <div class="sound-btn" id="sound-game">SFX ON</div>
         </div>
       </div>
 
