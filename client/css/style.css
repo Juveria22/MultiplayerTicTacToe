@@ -1,5 +1,6 @@
+@font-face { font-family: 'Geist Pixel'; src: url('../../uploads/Geist_Pixel/GeistPixel-Regular-VariableFont_ELSH.ttf') format('truetype'); font-weight: 100 900; font-display: swap; }
 /* ============================================================
-   Neon Arcade — shared styles
+   Neon Arcade - shared styles
    Dynamic / accent-driven styling lives inline in JS (main.js +
    per-game files). This sheet holds the static structure,
    background, chrome, and keyframes.
@@ -18,11 +19,11 @@ html, body {
   padding: 0;
   background: #08060f;
   color: #f6ecff;
-  font-family: 'Chakra Petch', system-ui, sans-serif;
+  font-family: 'Geist Pixel', ui-monospace, monospace;
   -webkit-font-smoothing: antialiased;
 }
 ::selection { background: #ff2d9b; color: #08060f; }
-input { font-family: 'Chakra Petch', sans-serif; }
+input { font-family: 'Geist Pixel', ui-monospace, monospace; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(255,45,155,.4); border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -76,7 +77,7 @@ input { font-family: 'Chakra Petch', sans-serif; }
 /* ============================================================
    LOBBY
    ============================================================ */
-.lobby { position: relative; z-index: 10; max-width: 1700px; margin: 0 auto; padding: 42px clamp(26px, 5vw, 70px) 80px; }
+.lobby { position: relative; z-index: 10; max-width: none; margin: 0 auto; padding: 42px clamp(16px, 1.6vw, 34px) 80px; }
 
 .lobby-head {
   position: relative; display: flex; align-items: flex-end;
@@ -128,12 +129,25 @@ input { font-family: 'Chakra Petch', sans-serif; }
 }
 .mode-btn.active-pink { color: #08060f; background: #ff2d9b; box-shadow: 0 0 16px rgba(255,45,155,.6); }
 .mode-btn.active-cyan { color: #08060f; background: #2de2ff; box-shadow: 0 0 16px rgba(45,226,255,.6); }
-.mode-hint { font-size: 13.5px; color: #8c78a8; letter-spacing: .3px; }
+/* margin-left keeps a full 34px drop column clear for the runner cube */
+.mode-hint { font-size: 13.5px; color: #8c78a8; letter-spacing: .3px; margin-left: 46px; }
 
-.grid-wrap { position: relative; }
+.grid-wrap { position: relative; container-type: inline-size; }
 .gd-smoke { position: absolute; inset: 0; z-index: 11; pointer-events: none; overflow: visible; }
-.gd-runner { position: absolute; top: 0; left: 0; z-index: 12; pointer-events: none; will-change: transform; }
-.game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(198px, 1fr)); gap: 16px; align-items: stretch; }
+.gd-runner { position: absolute; top: 0; left: 0; z-index: 14; pointer-events: none; will-change: transform; overflow: visible; }
+.game-grid {
+  /* columns always fill the row; --u is one "cabinet unit" derived from the real column
+     width, so every cabinet detail scales fluidly with the screen. Column count is always
+     a divisor of the 12-card catalog (1/2/3/4/6) so no row is ever short. */
+  --cols: 1;
+  --u: clamp(0.78px, calc((100cqw - var(--cols) * 22px) / var(--cols) / 198), 1.9px);
+  display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: calc(16 * var(--u)); align-items: stretch;
+}
+@media (min-width: 520px)  { .game-grid { --cols: 2; } }
+@media (min-width: 700px)  { .game-grid { --cols: 3; } }
+@media (min-width: 1000px) { .game-grid { --cols: 4; } }
+@media (min-width: 1250px) { .game-grid { --cols: 6; } }
 
 .lobby-foot { margin-top: 46px; text-align: center; font-size: 12.5px; color: #5f5078; letter-spacing: .4px; }
 .lobby-foot span { color: #8c78a8; }
@@ -154,36 +168,36 @@ input { font-family: 'Chakra Petch', sans-serif; }
   overflow: hidden;
   clip-path: var(--pix);
 }
-.cab-strip { position: absolute; top: 50px; bottom: 78px; width: 4px; opacity: .4; }
+.cab-strip { position: absolute; top: calc(50 * var(--u)); bottom: calc(78 * var(--u)); width: calc(4 * var(--u)); opacity: .4; }
 .cab-strip.left { left: 0; }
 .cab-strip.right { right: 0; }
-.cab-hood { position: relative; clip-path: polygon(0 0, 100% 0, 93% 100%, 7% 100%); padding: 13px 12px 14px; text-align: center; }
-.cab-name { font-size: 15px; line-height: 1.1; color: #fff; letter-spacing: .5px; }
-.cab-lightbar { height: 3px; }
+.cab-hood { position: relative; clip-path: polygon(0 0, 100% 0, 93% 100%, 7% 100%); padding: calc(13 * var(--u)) calc(12 * var(--u)) calc(14 * var(--u)); text-align: center; }
+.cab-name { font-size: calc(11 * var(--u)); line-height: 1.5; color: #fff; letter-spacing: .5px; }
+.cab-lightbar { height: calc(3 * var(--u)); }
 .cab-screen {
-  position: relative; margin: 13px 17px 0; border-radius: 6px;
+  position: relative; margin: calc(13 * var(--u)) calc(17 * var(--u)) 0; border-radius: calc(6 * var(--u));
   background: radial-gradient(120% 130% at 50% 26%, rgba(24,14,38,.5), #05030a);
   border: 3px solid #07040d; box-shadow: inset 0 0 24px rgba(0,0,0,.9); overflow: hidden;
 }
 .cab-screen .scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px); }
-.cab-badge { position: absolute; top: 7px; right: 7px; font-family: 'Press Start 2P', monospace; font-size: 6.5px; letter-spacing: 1px; padding: 3px 4px; border-radius: 3px; background: rgba(0,0,0,.55); }
-.cab-iconwrap { height: 104px; display: flex; align-items: center; justify-content: center; }
-.cab-icon { width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; animation: floaty 3s ease-in-out infinite; }
-.cab-tag { padding: 8px 14px 6px; text-align: center; font-size: 11.5px; color: #9d88ba; line-height: 1.4; min-height: 28px; }
+.cab-badge { position: absolute; top: calc(7 * var(--u)); right: calc(7 * var(--u)); font-family: 'Press Start 2P', monospace; font-size: calc(6.5 * var(--u)); letter-spacing: 1px; padding: 3px 4px; border-radius: 3px; background: rgba(0,0,0,.55); }
+.cab-iconwrap { height: calc(104 * var(--u)); display: flex; align-items: center; justify-content: center; }
+.cab-icon { width: calc(76 * var(--u)); height: calc(76 * var(--u)); display: flex; align-items: center; justify-content: center; animation: floaty 3s ease-in-out infinite; }
+.cab-tag { padding: calc(8 * var(--u)) calc(14 * var(--u)) calc(6 * var(--u)); text-align: center; font-family: 'Geist Pixel', ui-monospace, monospace; font-size: calc(12.5 * var(--u)); letter-spacing: .02em; text-transform: uppercase; color: #9d88ba; line-height: 1.35; min-height: calc(28 * var(--u)); }
 .cab-deck { margin-top: auto; position: relative; clip-path: polygon(9% 0, 91% 0, 100% 100%, 0 100%); background: linear-gradient(180deg, #301a48, #170c24); border-top: 2px solid rgba(255,255,255,.14); padding: 12px 16px 11px; }
-.cab-deck-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
-.cab-joy { position: relative; width: 22px; height: 24px; flex: none; }
-.cab-joy .base { position: absolute; bottom: 0; left: 2px; width: 18px; height: 7px; border-radius: 50%; background: rgba(0,0,0,.7); }
-.cab-joy .stick { position: absolute; bottom: 4px; left: 9px; width: 4px; height: 12px; border-radius: 2px; background: #241236; }
-.cab-joy .ball { position: absolute; bottom: 12px; left: 5px; width: 12px; height: 12px; border-radius: 50%; }
-.cab-btns { display: flex; gap: 3px; flex: none; align-items: center; margin-left: 14px; }
+.cab-deck-row { display: flex; align-items: center; justify-content: center; gap: calc(14 * var(--u)); }
+.cab-joy { position: relative; width: calc(22 * var(--u)); height: calc(24 * var(--u)); flex: none; }
+.cab-joy .base { position: absolute; bottom: 0; left: calc(2 * var(--u)); width: calc(18 * var(--u)); height: calc(7 * var(--u)); border-radius: 50%; background: rgba(0,0,0,.7); }
+.cab-joy .stick { position: absolute; bottom: calc(4 * var(--u)); left: calc(9 * var(--u)); width: calc(4 * var(--u)); height: calc(12 * var(--u)); border-radius: calc(2 * var(--u)); background: #241236; }
+.cab-joy .ball { position: absolute; bottom: calc(12 * var(--u)); left: calc(5 * var(--u)); width: calc(12 * var(--u)); height: calc(12 * var(--u)); border-radius: 50%; }
+.cab-btns { display: flex; gap: calc(3 * var(--u)); flex: none; align-items: center; margin-left: calc(14 * var(--u)); }
 .cab-btns div:nth-child(1) { transform: translateY(3px); }
 .cab-btns div:nth-child(2) { transform: translateY(-5px); }
 .cab-btns div:nth-child(3) { transform: translateY(3px); }
-.cab-btns div { width: 12px; height: 12px; border-radius: 50%; }
-.cab-door { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 9px 14px 11px; background: #09040f; }
-.cab-door .slot { width: 15px; height: 5px; border-radius: 2px; background: #000; }
-.cab-door .start { font-family: 'Press Start 2P', monospace; font-size: 7.5px; letter-spacing: 1px; }
+.cab-btns div { width: calc(12 * var(--u)); height: calc(12 * var(--u)); border-radius: 50%; }
+.cab-door { display: flex; align-items: center; justify-content: center; gap: calc(9 * var(--u)); padding: calc(9 * var(--u)) calc(14 * var(--u)) calc(11 * var(--u)); background: #09040f; }
+.cab-door .slot { width: calc(15 * var(--u)); height: calc(5 * var(--u)); border-radius: calc(2 * var(--u)); background: #000; }
+.cab-door .start { font-family: 'Press Start 2P', monospace; font-size: calc(7.5 * var(--u)); letter-spacing: 1px; }
 
 /* ============================================================
    GAME SCREEN
@@ -216,7 +230,7 @@ input { font-family: 'Chakra Petch', sans-serif; }
 .sound-btn { cursor: pointer; font-size: 15px; padding: 7px 11px; border-radius: 8px; border: 1.5px solid rgba(45,226,255,.3); color: #9fe9ff; }
 
 .game-body { flex: 1; display: flex; min-height: 0; }
-.board-area { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; min-width: 0; }
+.board-area { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; min-width: 0; }
 .status { margin-bottom: 20px; min-height: 30px; }
 .board { position: relative; }
 
@@ -226,12 +240,12 @@ input { font-family: 'Chakra Petch', sans-serif; }
 .overlay.countdown { background: rgba(8,6,15,.7); backdrop-filter: blur(2px); }
 .overlay.winner { background: rgba(8,6,15,.86); backdrop-filter: blur(4px); z-index: 25; animation: popIn .35s; }
 .spinner { width: 46px; height: 46px; border: 3px solid rgba(255,45,155,.25); border-top-color: #ff2d9b; border-radius: 50%; animation: spin .9s linear infinite; margin-bottom: 22px; }
-.ov-title { font-family: 'Press Start 2P', monospace; font-size: 12px; color: #ff2d9b; letter-spacing: 1px; text-align: center; line-height: 1.7; }
+.ov-title { font-family: 'Press Start 2P', monospace; font-size: 11px; color: #ff2d9b; letter-spacing: 1px; text-align: center; line-height: 1.7; }
 .ov-sub { margin-top: 14px; font-size: 13px; color: #8c78a8; }
-.count-num { font-family: 'Press Start 2P', monospace; font-size: 64px; color: #ffb000; text-shadow: 0 0 26px rgba(255,176,0,.8); animation: popIn .4s; }
-.win-kicker { font-family: 'Press Start 2P', monospace; font-size: 13px; color: #74618f; letter-spacing: 2px; margin-bottom: 18px; }
-.win-text { font-family: 'Press Start 2P', monospace; font-size: 34px; text-align: center; line-height: 1.5; animation: floaty 2.4s ease-in-out infinite; white-space: pre-line; }
-.win-actions { display: flex; gap: 14px; margin-top: 36px; }
+.count-num { font-family: 'Press Start 2P', monospace; font-size: 40px; color: #ffb000; text-shadow: 0 0 26px rgba(255,176,0,.8); animation: popIn .4s; }
+.win-kicker { font-family: 'Press Start 2P', monospace; font-size: 10px; color: #74618f; letter-spacing: 2px; margin-bottom: 12px; }
+.win-text { font-family: 'Press Start 2P', monospace; font-size: 19px; text-align: center; line-height: 1.5; animation: floaty 2.4s ease-in-out infinite; white-space: pre-line; }
+.win-actions { display: flex; gap: 14px; margin-top: 24px; }
 .btn-rematch { cursor: pointer; padding: 14px 22px; border-radius: 10px; color: #08060f; font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: 1px; }
 .btn-games { cursor: pointer; padding: 14px 22px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.18); color: #bda6d8; font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: 1px; }
 
@@ -259,3 +273,71 @@ input { font-family: 'Chakra Petch', sans-serif; }
 @keyframes twinkle { 0%, 100% { opacity: .12; transform: scale(.82); } 50% { opacity: .5; transform: scale(1.08); } }
 @keyframes starpop { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.2) rotate(0deg); } 22% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.25) rotate(45deg); } }
 @keyframes gdsmoke { 0% { transform: translate(0,0) scale(.5); opacity: .6; } 100% { transform: translate(-16px,-12px) scale(2.7); opacity: 0; } }
+
+
+/* ============================================================
+   ARCADE DRESSING - pixel sprites, bulb chase, corner brackets
+   ============================================================ */
+.pix { width: 4px; height: 4px; background: transparent; position: absolute; pointer-events: none; opacity: .5; }
+.pix.invader { margin-right: 44px; margin-bottom: 32px; }
+.pix.ghost { margin-right: 32px; margin-bottom: 32px; }
+.pix.heart { margin-right: 28px; margin-bottom: 24px; }
+.pix.coin { margin-right: 28px; margin-bottom: 28px; }
+.pix.alien2 { margin-right: 32px; margin-bottom: 32px; }
+.pix.rocket { margin-right: 24px; margin-bottom: 32px; }
+.pix.invader { color: #2de2ff; box-shadow: 8px 0px 0 currentColor,32px 0px 0 currentColor,12px 4px 0 currentColor,28px 4px 0 currentColor,8px 8px 0 currentColor,12px 8px 0 currentColor,16px 8px 0 currentColor,20px 8px 0 currentColor,24px 8px 0 currentColor,28px 8px 0 currentColor,32px 8px 0 currentColor,4px 12px 0 currentColor,8px 12px 0 currentColor,16px 12px 0 currentColor,20px 12px 0 currentColor,24px 12px 0 currentColor,32px 12px 0 currentColor,36px 12px 0 currentColor,0px 16px 0 currentColor,4px 16px 0 currentColor,8px 16px 0 currentColor,12px 16px 0 currentColor,16px 16px 0 currentColor,20px 16px 0 currentColor,24px 16px 0 currentColor,28px 16px 0 currentColor,32px 16px 0 currentColor,36px 16px 0 currentColor,40px 16px 0 currentColor,0px 20px 0 currentColor,8px 20px 0 currentColor,12px 20px 0 currentColor,16px 20px 0 currentColor,20px 20px 0 currentColor,24px 20px 0 currentColor,28px 20px 0 currentColor,32px 20px 0 currentColor,40px 20px 0 currentColor,0px 24px 0 currentColor,8px 24px 0 currentColor,32px 24px 0 currentColor,40px 24px 0 currentColor,12px 28px 0 currentColor,16px 28px 0 currentColor,24px 28px 0 currentColor,28px 28px 0 currentColor; }
+.pix.ghost   { color: #ff2d9b; box-shadow: 8px 0px 0 currentColor,12px 0px 0 currentColor,16px 0px 0 currentColor,20px 0px 0 currentColor,4px 4px 0 currentColor,8px 4px 0 currentColor,12px 4px 0 currentColor,16px 4px 0 currentColor,20px 4px 0 currentColor,24px 4px 0 currentColor,0px 8px 0 currentColor,4px 8px 0 currentColor,12px 8px 0 currentColor,16px 8px 0 currentColor,24px 8px 0 currentColor,28px 8px 0 currentColor,0px 12px 0 currentColor,4px 12px 0 currentColor,8px 12px 0 currentColor,12px 12px 0 currentColor,16px 12px 0 currentColor,20px 12px 0 currentColor,24px 12px 0 currentColor,28px 12px 0 currentColor,0px 16px 0 currentColor,4px 16px 0 currentColor,8px 16px 0 currentColor,12px 16px 0 currentColor,16px 16px 0 currentColor,20px 16px 0 currentColor,24px 16px 0 currentColor,28px 16px 0 currentColor,0px 20px 0 currentColor,4px 20px 0 currentColor,8px 20px 0 currentColor,12px 20px 0 currentColor,16px 20px 0 currentColor,20px 20px 0 currentColor,24px 20px 0 currentColor,28px 20px 0 currentColor,0px 24px 0 currentColor,4px 24px 0 currentColor,8px 24px 0 currentColor,12px 24px 0 currentColor,16px 24px 0 currentColor,20px 24px 0 currentColor,24px 24px 0 currentColor,28px 24px 0 currentColor,0px 28px 0 currentColor,8px 28px 0 currentColor,12px 28px 0 currentColor,20px 28px 0 currentColor,24px 28px 0 currentColor; }
+.pix.coin   { color: #ffd84d; box-shadow: 8px 0px 0 currentColor,12px 0px 0 currentColor,16px 0px 0 currentColor,4px 4px 0 currentColor,8px 4px 0 currentColor,16px 4px 0 currentColor,20px 4px 0 currentColor,0px 8px 0 currentColor,4px 8px 0 currentColor,12px 8px 0 currentColor,20px 8px 0 currentColor,24px 8px 0 currentColor,0px 12px 0 currentColor,4px 12px 0 currentColor,12px 12px 0 currentColor,20px 12px 0 currentColor,24px 12px 0 currentColor,0px 16px 0 currentColor,4px 16px 0 currentColor,12px 16px 0 currentColor,20px 16px 0 currentColor,24px 16px 0 currentColor,4px 20px 0 currentColor,8px 20px 0 currentColor,16px 20px 0 currentColor,20px 20px 0 currentColor,8px 24px 0 currentColor,12px 24px 0 currentColor,16px 24px 0 currentColor; }
+.pix.alien2 { color: #9a6bff; box-shadow: 12px 0px 0 currentColor,16px 0px 0 currentColor,8px 4px 0 currentColor,12px 4px 0 currentColor,16px 4px 0 currentColor,20px 4px 0 currentColor,4px 8px 0 currentColor,8px 8px 0 currentColor,12px 8px 0 currentColor,16px 8px 0 currentColor,20px 8px 0 currentColor,24px 8px 0 currentColor,0px 12px 0 currentColor,4px 12px 0 currentColor,12px 12px 0 currentColor,16px 12px 0 currentColor,24px 12px 0 currentColor,28px 12px 0 currentColor,0px 16px 0 currentColor,4px 16px 0 currentColor,8px 16px 0 currentColor,12px 16px 0 currentColor,16px 16px 0 currentColor,20px 16px 0 currentColor,24px 16px 0 currentColor,28px 16px 0 currentColor,8px 20px 0 currentColor,20px 20px 0 currentColor,4px 24px 0 currentColor,12px 24px 0 currentColor,16px 24px 0 currentColor,24px 24px 0 currentColor,0px 28px 0 currentColor,8px 28px 0 currentColor,20px 28px 0 currentColor,28px 28px 0 currentColor; }
+.pix.rocket { color: #2de2ff; box-shadow: 8px 0px 0 currentColor,12px 0px 0 currentColor,4px 4px 0 currentColor,8px 4px 0 currentColor,12px 4px 0 currentColor,16px 4px 0 currentColor,0px 8px 0 currentColor,4px 8px 0 currentColor,8px 8px 0 currentColor,12px 8px 0 currentColor,16px 8px 0 currentColor,20px 8px 0 currentColor,0px 12px 0 currentColor,4px 12px 0 currentColor,8px 12px 0 currentColor,12px 12px 0 currentColor,16px 12px 0 currentColor,20px 12px 0 currentColor,0px 16px 0 currentColor,8px 16px 0 currentColor,12px 16px 0 currentColor,20px 16px 0 currentColor,0px 20px 0 currentColor,8px 20px 0 currentColor,12px 20px 0 currentColor,20px 20px 0 currentColor,8px 24px 0 currentColor,12px 24px 0 currentColor,4px 28px 0 currentColor,16px 28px 0 currentColor; }
+.pix.heart   { color: #ffb000; box-shadow: 4px 0px 0 currentColor,8px 0px 0 currentColor,16px 0px 0 currentColor,20px 0px 0 currentColor,0px 4px 0 currentColor,4px 4px 0 currentColor,8px 4px 0 currentColor,12px 4px 0 currentColor,16px 4px 0 currentColor,20px 4px 0 currentColor,24px 4px 0 currentColor,0px 8px 0 currentColor,4px 8px 0 currentColor,8px 8px 0 currentColor,12px 8px 0 currentColor,16px 8px 0 currentColor,20px 8px 0 currentColor,24px 8px 0 currentColor,4px 12px 0 currentColor,8px 12px 0 currentColor,12px 12px 0 currentColor,16px 12px 0 currentColor,20px 12px 0 currentColor,8px 16px 0 currentColor,12px 16px 0 currentColor,16px 16px 0 currentColor,12px 20px 0 currentColor; }
+.pix.bob  { animation: pixbob 2.6s steps(2) infinite; }
+.pix.bob2 { animation: pixbob 3.4s steps(2) infinite .4s; }
+@keyframes pixbob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+/* marquee bulb strip */
+.bulbs { display: flex; gap: 10px; justify-content: center; padding: 14px 0 4px; width: 440px; margin: 0 auto; }
+.bulbs i { width: 7px; height: 7px; border-radius: 50%; background: #3a2350; box-shadow: 0 0 0 1px rgba(0,0,0,.5) inset; animation: bulbchase 1.6s steps(1) infinite; }
+.bulbs i:nth-child(4n+1) { animation-delay: 0s; }
+.bulbs i:nth-child(4n+2) { animation-delay: .4s; }
+.bulbs i:nth-child(4n+3) { animation-delay: .8s; }
+.bulbs i:nth-child(4n+4) { animation-delay: 1.2s; }
+@keyframes bulbchase { 0%, 40% { background: #ff2d9b; box-shadow: 0 0 9px #ff2d9b; } 41%, 100% { background: #3a2350; box-shadow: none; } }
+
+/* pixel corner brackets around the cabinet grid */
+.grid-wrap { position: relative; }
+.grid-wrap::before, .grid-wrap::after {
+  content: ''; position: absolute; width: 26px; height: 26px; pointer-events: none;
+  border: 3px solid rgba(45,226,255,.4);
+}
+.grid-wrap::before { top: -14px; left: -10px; border-right: 0; border-bottom: 0; }
+.grid-wrap::after { bottom: -14px; right: -10px; border-left: 0; border-top: 0; }
+
+/* section rule with pixel ticks */
+.pix-rule { display: flex; align-items: center; gap: 10px; margin: 26px 0 14px; font-family: 'Press Start 2P', monospace; font-size: 8.5px; letter-spacing: 1.5px; color: #6f5b8c; }
+.pix-rule::before, .pix-rule::after { content: ''; height: 3px; flex: 1; background: repeating-linear-gradient(90deg, rgba(255,45,155,.45) 0 6px, transparent 6px 12px); }
+
+/* board fills its area */
+.board { position: relative; transform-origin: center center; }
+
+
+/* deliberate sprite placements - inline, so they can never collide with content */
+.pix.inline { position: relative; display: inline-block; flex: none; opacity: .55; }
+/* margin-bottom reserves the box-shadow's painted height so sprites never bleed
+   into the row below; margin-right reserves its painted width */
+.pix-rule { align-items: center; }
+.pix-rule .pix.invader { margin: 0 48px 32px 0; }
+.pix-rule .pix.ghost { margin: 0 36px 0 0; top: -25px; }
+.pix.ghost.green { color: #7cf59a; }
+.pix-rule .pix.coin { margin: 0 32px 28px 0; }
+.pix-rule .pix.alien2 { margin: 0 36px 32px 0; }
+.pix-rule .pix.heart { margin: 0 32px 24px 0; }
+.pix-rule .pix.rocket { margin: 0 28px 32px 0; }
+.pix-march { display: flex; align-items: flex-end; justify-content: center; gap: 22px; padding: 30px 0 6px; min-height: 40px; }
+.pix-march .pix.inline { opacity: .4; }
+.pix-march .pix.invader { margin: 0 44px 32px 0; }
+.pix-march .pix.ghost { margin: 0 32px 32px 0; }
+.pix-march .pix.coin { margin: 0 28px 28px 0; }
+.pix-march .pix.alien2 { margin: 0 32px 32px 0; }
+.pix-march .pix.heart { margin: 0 28px 24px 0; }
+.pix-march .pix.rocket { margin: 0 24px 32px 0; }
