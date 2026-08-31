@@ -1,5 +1,5 @@
 /* ============================================================
-   Neon Arcade — core (main.js)
+   Neon Arcade - core (main.js)
 
    Owns: WebSocket connection, lobby, screen routing, chat,
    sound, cosmetic FX, and the win/overlay flow.
@@ -111,16 +111,7 @@
   }
 
   /* card display fonts */
-  function cardFont(id) {
-    return {
-      'tic-tac-toe': "'Bungee Shade', cursive", 'connect-four': "'Faster One', cursive",
-      'rps': "'Wallpoet', cursive", 'memory': "'Bowlby One SC', cursive",
-      'checkers': "'Audiowide', cursive", 'reversi': "'Bungee Shade', cursive",
-      'dots': "'Faster One', cursive", 'battleship': "'Wallpoet', cursive",
-      'pong': "'Bungee Shade', cursive", 'drawing': "'Bowlby One SC', cursive",
-      'sugar': "'Bungee', cursive", 'dressup': "'Bowlby One SC', cursive"
-    }[id] || "'Bungee', cursive";
-  }
+  function cardFont() { return "'Press Start 2P', monospace"; }
 
   /* ============================================================
      STATE
@@ -134,18 +125,18 @@
   // catalog: order + cosmetic meta for the lobby. Games that are not
   // registered fall back to a "coming soon" board but still show a cabinet.
   var CATALOG = [
-    { id: 'tic-tac-toe', name: 'TIC TAC TOE', tagline: 'Three in a row. The classic standoff.', accent: '#ff2d9b', badge: 'WEB' },
-    { id: 'connect-four', name: 'CONNECT 4', tagline: 'Drop discs, line up four to win.', accent: '#2de2ff', badge: 'WEB' },
-    { id: 'rps', name: 'RPS DUEL', tagline: 'Rock paper scissors, best of five.', accent: '#ffb000', badge: 'WEB' },
-    { id: 'memory', name: 'MEMORY', tagline: 'Flip cards, match pairs, sharpest mind wins.', accent: '#b14bff', badge: 'WEB' },
-    { id: 'checkers', name: 'CHECKERS', tagline: 'Jump and capture across the board.', accent: '#39ff8b', badge: 'WEB' },
-    { id: 'reversi', name: 'REVERSI', tagline: 'Flank to flip. Own the board.', accent: '#ff5a5a', badge: 'WEB' },
-    { id: 'dots', name: 'DOTS & BOXES', tagline: 'Close a box, claim it, take another turn.', accent: '#39ff8b', badge: 'WEB' },
-    { id: 'battleship', name: 'BATTLESHIP', tagline: 'Hide your fleet. Sink theirs first.', accent: '#ff2d9b', badge: 'WEB' },
-    { id: 'pong', name: 'PONG', tagline: 'Reflex paddle classic. First to 7.', accent: '#2de2ff', badge: 'WEB' },
-    { id: 'drawing', name: 'DOODLE', tagline: 'Draw together on a shared canvas.', accent: '#ffb000', badge: 'WEB' },
-    { id: 'sugar', name: 'SUGAR RUSH', tagline: 'Draw lines, pour sugar, fill your cup first.', accent: '#ff5a5a', badge: 'WEB' },
-    { id: 'dressup', name: 'DRESS UP', tagline: 'Style a neon figure together. Pure chill.', accent: '#b14bff', badge: 'WEB' }
+    { id: 'tic-tac-toe', name: 'TIC TAC TOE', tagline: '3×3 grid · three in a row', accent: '#ff2d9b', badge: 'WEB' },
+    { id: 'connect-four', name: 'CONNECT 4', tagline: '7×6 grid · four in a line', accent: '#2de2ff', badge: 'WEB' },
+    { id: 'rps', name: 'ROCK, PAPER, SCISSORS', tagline: 'Hand throws · best of five', accent: '#ffb000', badge: 'WEB' },
+    { id: 'memory', name: 'MEMORY', tagline: 'Face-down grid · matching pairs', accent: '#b14bff', badge: 'WEB' },
+    { id: 'checkers', name: 'CHECKERS', tagline: '8×8 board · jump and capture', accent: '#39ff8b', badge: 'WEB' },
+    { id: 'reversi', name: 'REVERSI', tagline: '8×8 board · flank and flip', accent: '#ff5a5a', badge: 'WEB' },
+    { id: 'dots', name: 'DOTS & BOXES', tagline: 'Dot grid · lines and boxes', accent: '#39ff8b', badge: 'WEB' },
+    { id: 'battleship', name: 'BATTLESHIP', tagline: 'Hidden fleets · grid guessing', accent: '#ff2d9b', badge: 'WEB' },
+    { id: 'pong', name: 'PONG', tagline: 'Paddles and ball · first to 7', accent: '#2de2ff', badge: 'WEB' },
+    { id: 'drawing', name: 'DOODLE', tagline: 'Shared drawing canvas', accent: '#ffb000', badge: 'WEB' },
+    { id: 'sugar', name: 'SUGAR RUSH', tagline: 'Drawn lines · falling sugar physics', accent: '#ff5a5a', badge: 'WEB' },
+    { id: 'dressup', name: 'DRESS UP', tagline: 'Dress-up figure · outfit builder', accent: '#b14bff', badge: 'WEB' }
   ];
   function catById(id) { for (var i = 0; i < CATALOG.length; i++) if (CATALOG[i].id === id) return CATALOG[i]; return CATALOG[0]; }
 
@@ -163,12 +154,60 @@
      AUDIO
      ============================================================ */
   var _ac = null;
+  /* uploaded mp3 clips - the arcade's four sound effects, all at half volume */
+  var _clips = null;
+  var CLIP_SRCS = {
+    hover: 'uploads/shidenbeatsmusic-sound-effect-twinklesparkle-115095.mp3',
+    card: 'uploads/on-card-click.mp3',
+    win: 'uploads/player-win-sound.mp3',
+    lose: 'uploads/player-lose-sound-online-only.mp3'
+  };
+  // continuous sparkle shimmer - bundled locally so production never depends on a third-party host
+  var SPARKLE_LOOP_SRC = 'arcade/assets/sfx/sparkle-shimmer.mp3';
+  var _sl = null, _slStop = null, _slFade = null;
+  function preloadSparkles() {
+    _sl = new Audio(SPARKLE_LOOP_SRC);
+    _sl.loop = true; _sl.preload = 'auto'; _sl.volume = 0.08; _sl.load();
+  }
+  function sparkleFadeOut() {
+    if (!_sl || _sl.paused) return;
+    _slFade = setInterval(function () {
+      _sl.volume = Math.max(0, _sl.volume - 0.018);
+      if (_sl.volume <= 0.002) { clearInterval(_slFade); _slFade = null; _sl.pause(); _sl.currentTime = 0; }
+    }, 40);
+  }
+  function preloadClips() {
+    _clips = {};
+    for (var k in CLIP_SRCS) {
+      var a = new Audio(CLIP_SRCS[k]);
+      a.preload = 'auto'; a.volume = 0.25; a.load();
+      _clips[k] = a;
+    }
+  }
+  function playClip(name) {
+    if (!S.soundOn) return;
+    if (!_clips) preloadClips();
+    var a = _clips[name]; if (!a) return;
+    if (name === 'hover' && !a.paused) return; // let the hover clip finish
+    try { a.currentTime = 0; a.play().catch(function () {}); } catch (e) {}
+  }
+  // shimmer sparkle: a burst of tiny high bell grains, like fairy dust
+  function sparkleShot() {
+    if (!S.soundOn) return;
+    if (!_sl) preloadSparkles();
+    if (_slFade) { clearInterval(_slFade); _slFade = null; }
+    _sl.volume = 0.08;
+    if (_sl.paused) { try { _sl.play().catch(function () {}); } catch (e) {} }
+    if (_slStop) clearTimeout(_slStop);
+    _slStop = setTimeout(sparkleFadeOut, 350); // stars stopped -> fade
+  }
   function ac() {
     if (!_ac) { try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
     if (_ac && _ac.state === 'suspended') _ac.resume();
     return _ac;
   }
   function tone(freq, dur, type, vol, slideTo) {
+    return; // synth cues retired in favor of the uploaded clips
     if (!S.soundOn) return;
     var a = ac(); if (!a) return;
     var o = a.createOscillator(), g = a.createGain();
@@ -188,17 +227,10 @@
   }
   function sfx(kind) {
     switch (kind) {
-      case 'hover': tone(1047, 0.035, 'sine', 0.018); break;
-      case 'click': blip(659, 880, 0.08, 0.04); break;
-      case 'place': blip(587, 784, 0.10, 0.05); break;
-      case 'drop': blip(392, 262, 0.14, 0.045); break;
-      case 'flip': blip(784, 1175, 0.07, 0.032, 'sine'); break;
-      case 'match': [659, 988].forEach(function (f, i) { setTimeout(function () { tone(f, 0.12, 'triangle', 0.05); }, i * 85); }); break;
-      case 'win': [523, 659, 784, 880, 1047].forEach(function (f, i) { setTimeout(function () { tone(f, 0.18, 'triangle', 0.055); }, i * 105); }); break;
-      case 'lose': [587, 494, 392, 330].forEach(function (f, i) { setTimeout(function () { tone(f, 0.2, 'triangle', 0.05); }, i * 120); }); break;
-      case 'beep': tone(784, 0.11, 'sine', 0.05); break;
-      case 'go': blip(659, 1319, 0.24, 0.06); break;
-      case 'error': blip(330, 247, 0.16, 0.045); break;
+      case 'go': case 'flip': playClip('card'); break;
+      case 'win': playClip('win'); break;
+      case 'lose': playClip('lose'); break;
+      // all other legacy cues are intentionally silent
     }
   }
 
@@ -228,7 +260,7 @@
       S.matchState = 'waiting'; S.winInfo = null;
       hideOverlays();
       document.getElementById('ov-waiting').hidden = false;
-      pushSys('Opponent left — waiting for a new player…');
+      pushSys('Opponent left - waiting for a new player…');
       return;
     }
     var g = activeGame();
@@ -307,7 +339,6 @@
       }
     }, glyphs[(Math.random() * glyphs.length) | 0]);
     document.getElementById('star-layer').appendChild(span);
-    if (S.soundOn && Math.random() < 0.5) tone(880 + Math.random() * 500, 0.05, 'triangle', 0.018);
     setTimeout(function () { span.remove(); }, 1600);
   }
 
@@ -369,7 +400,7 @@
     document.getElementById('gd-runner').appendChild(cube);
   }
 
-  var _groundTop = null, _retry = null, _smokeTimer = null;
+  var _groundTop = null, _retry = null, _smokeTimer = null, _surfaces = null;
   function measurePlatforms() {
     var runner = document.getElementById('gd-runner');
     if (!runner) return null;
@@ -406,19 +437,47 @@
     var size = 34, speed = 150, hopTime = 0.46, arc = 26;
     var cards = pf.plats, cardTop = pf.top;
     _groundTop = cardTop - size;
-    var segs = [];
+    // raised platforms the cube hops up onto: the mode toggle, then the bulb strip
+    var raised = [];
     var toggleEl = document.getElementById('gd-toggle');
     if (toggleEl) {
       var tr = toggleEl.getBoundingClientRect();
-      var tg = { left: tr.left - wr.left, right: tr.right - wr.left, top: tr.top - wr.top };
-      var c0 = cards[0];
-      var upX = Math.min(Math.max(tg.left, c0.left + 14), c0.right - 4);
-      segs.push({ left: c0.left, right: upX, top: cardTop });
-      segs.push({ left: tg.left, right: tg.right, top: tg.top, takeoff: true });
-      cards.forEach(function (c) { if (c.right > tg.right + 4) segs.push({ left: Math.max(c.left, tg.right), right: c.right, top: cardTop }); });
-    } else {
-      cards.forEach(function (c) { segs.push({ left: c.left, right: c.right, top: cardTop }); });
+      // the cube drops vertically off the platform's right edge; .mode-hint carries a
+      // margin-left that keeps that 34px column clear of both the toggle and the text
+      raised.push({ left: tr.left - wr.left, right: tr.right - wr.left, top: tr.top - wr.top, takeoff: true });
     }
+    var bulbsEl = document.querySelector('.bulbs');
+    if (bulbsEl) {
+      var br_ = bulbsEl.getBoundingClientRect();
+      // land on the strip's first bulb and leave from its last
+      raised.push({ left: br_.left - wr.left, right: br_.right - wr.left, top: br_.top - wr.top + 4, takeoff: true });
+    }
+    raised.sort(function (a, b) { return a.left - b.left; });
+
+    // Every card is its own platform, so each gap between cards gets hopped.
+    // Raised platforms are spliced in at their x position, replacing the card
+    // ground beneath them.
+    var segs = [];
+    var cursor = cards[0].left, ri = 0;
+    cards.forEach(function (c) {
+      var from = Math.max(c.left, cursor);
+      while (ri < raised.length && raised[ri].left < c.right) {
+        var rp = raised[ri];
+        if (rp.left > from + 6) segs.push({ left: from, right: rp.left, top: cardTop });
+        segs.push({ left: rp.left, right: rp.right, top: rp.top, takeoff: true });
+        from = Math.max(from, rp.right);
+        cursor = rp.right;
+        ri++;
+      }
+      if (c.right > from + 6) { segs.push({ left: from, right: c.right, top: cardTop }); cursor = c.right; }
+    });
+    while (ri < raised.length) {
+      var rp2 = raised[ri];
+      segs.push({ left: rp2.left, right: rp2.right, top: rp2.top, takeoff: true });
+      ri++;
+    }
+    // every surface the cube can run along - smoke puffs on all of them
+    _surfaces = segs.map(function (s) { return s.top; });
     var gY = function (s) { return s.top - size; };
     var tl = [], t = 0, rot = 0;
     tl.push({ t: 0, x: segs[0].left, y: gY(segs[0]), rot: 0 });
@@ -456,13 +515,18 @@
     var rr = runner.getBoundingClientRect(), lr = layer.getBoundingClientRect();
     if (rr.width === 0) return;
     var footY = rr.bottom - lr.top;
-    var groundY = (_groundTop != null ? _groundTop : 0) + 34;
-    if (groundY - footY > 7) return;
+    // puff whenever the cube's feet sit on ANY platform surface, not just the cards
+    var levels = (_surfaces && _surfaces.length) ? _surfaces : [(_groundTop != null ? _groundTop : 0)];
+    var onGround = false;
+    for (var i = 0; i < levels.length; i++) {
+      if (Math.abs(levels[i] - footY) <= 7) { onGround = true; break; }
+    }
+    if (!onGround) return;
     spawnSmoke((rr.left - lr.left) + 2, footY);
   }
 
   /* ============================================================
-     LOBBY — build cabinets
+     LOBBY - build cabinets
      ============================================================ */
   function buildCabinet(meta) {
     var a = meta.accent;
@@ -482,7 +546,6 @@
         h('div', { class: 'cab-badge', style: { color: a, border: '1px solid ' + a } }, S.mode === 'local' ? 'LOCAL' : 'WEB'),
         h('div', { class: 'cab-iconwrap' }, h('div', { class: 'cab-icon', html: icon(meta.id, a, 56) }))
       ]),
-      h('div', { class: 'cab-tag' }, meta.tagline),
       h('div', { class: 'cab-deck' }, h('div', { class: 'cab-deck-row' }, [
         h('div', { class: 'cab-joy' }, [
           h('div', { class: 'base' }),
@@ -507,6 +570,19 @@
     CATALOG.forEach(function (m) { grid.appendChild(buildCabinet(m)); });
     renderRoster();
   }
+
+  /* ---- WINS counter avatars (rebuilt so late-loading dress-up figures appear) ---- */
+  function renderSeriesAvatars() {
+    [1, 2].forEach(function (p) {
+      var el = document.querySelector('.series-p' + p); if (!el) return;
+      var old = el.querySelector('[data-av]'); if (old) old.remove();
+      el.style.display = 'inline-flex'; el.style.alignItems = 'center'; el.style.gap = '6px';
+      var node = avatarFace(p, 18); node.setAttribute('data-av', '1');
+      if (p === 1) el.insertBefore(node, el.firstChild); else el.appendChild(node);
+    });
+  }
+  function refreshAvatars() { renderRoster(); renderSeriesAvatars(); if (S.gameId) renderStatus(); }
+  Arcade.refreshAvatars = refreshAvatars;
 
   /* ---- home-screen player roster: shows saved Dress Up avatars ---- */
   function renderRoster() {
@@ -534,9 +610,9 @@
     sfx('click'); S.mode = m;
     document.getElementById('mode-local').className = 'mode-btn' + (m === 'local' ? ' active-pink' : '');
     document.getElementById('mode-online').className = 'mode-btn' + (m === 'online' ? ' active-cyan' : '');
-    document.getElementById('mode-hint').textContent = m === 'local'
-      ? 'Two players, one keyboard.'
-      : 'Matchmake with a 2nd browser. Every game plays over the web.';
+    // copy lives in the template (editable); JS only toggles which line shows
+    var hints = document.querySelectorAll('#mode-hint [data-hint]');
+    for (var hi = 0; hi < hints.length; hi++) hints[hi].hidden = hints[hi].getAttribute('data-hint') !== m;
     var badgeTxt = m === 'local' ? 'LOCAL' : 'WEB';
     var badges = document.querySelectorAll('.cab-badge');
     for (var i = 0; i < badges.length; i++) badges[i].textContent = badgeTxt;
@@ -555,7 +631,7 @@
     document.getElementById('game-icon').style.background = 'radial-gradient(closest-side,' + meta.accent + '33,transparent)';
     var title = document.getElementById('game-title');
     title.textContent = meta.name; title.style.color = meta.accent; title.style.textShadow = '0 0 14px ' + meta.accent;
-    document.getElementById('mode-badge').textContent = online ? '🌐 WEB' : '🎮 LOCAL';
+    document.getElementById('mode-badge').textContent = online ? 'WEB' : 'LOCAL';
     document.getElementById('series').hidden = online;
     document.getElementById('series-p1').textContent = '0';
     document.getElementById('series-p2').textContent = '0';
@@ -609,6 +685,7 @@
     var mod = activeGame();
     if (mod && mod.render) mod.render(root, api);
     else root.appendChild(comingSoon());
+    requestAnimationFrame(fitBoard);
   }
   function comingSoon() {
     return h('div', { style: {
@@ -617,9 +694,52 @@
       fontFamily: "'Press Start 2P',monospace", fontSize: 11, textAlign: 'center', lineHeight: 1.8, whiteSpace: 'pre-line'
     } }, 'COMING\nSOON…');
   }
-  function pill(txt, color, glow) {
-    return h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 11, color: color, textShadow: glow ? '0 0 12px ' + color : 'none', letterSpacing: 1 } }, txt);
+  function avatarFace(p, size) {
+    var c = p === 1 ? P1 : P2, sz = size || 20;
+    // saved Dress Up figure takes priority over the pixel face
+    try {
+      if (typeof Arcade.loadAvatars === 'function' && typeof Arcade.dressupMini === 'function') {
+        var av = Arcade.loadAvatars()[p - 1];
+        if (av) return h('span', {
+          style: { display: 'inline-flex', flex: 'none', alignItems: 'center', justifyContent: 'center', width: sz, height: sz, filter: 'drop-shadow(0 0 4px ' + c + ')' },
+          html: Arcade.dressupMini(av, sz)
+        });
+      }
+    } catch (e) {}
+    function eye(l) { return h('span', { style: { position: 'absolute', top: '30%', left: l, width: '18%', height: '20%', background: '#08060f', borderRadius: '1px' } }); }
+    return h('span', { style: {
+      position: 'relative', display: 'inline-block', flex: 'none', width: sz, height: sz, borderRadius: '22%',
+      background: 'linear-gradient(145deg,' + c + ',' + c + '77)', boxShadow: '0 0 8px ' + c, border: '1.5px solid rgba(255,255,255,.35)'
+    } }, [
+      eye('22%'), eye('58%'),
+      h('span', { style: { position: 'absolute', bottom: '20%', left: '30%', width: '40%', height: '12%', background: '#08060f', borderRadius: '2px' } })
+    ]);
   }
+  function pill(txt, color, glow) {
+    var node = h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 11, color: color, textShadow: glow ? '0 0 12px ' + color : 'none', letterSpacing: 1 } }, txt);
+    var m = /PLAYER\s*([12])/.exec(String(txt));
+    if (m) return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } }, [avatarFace(+m[1], 20), node]);
+    return node;
+  }
+
+  /* ---- fit the board to the available area (zoom keeps pointer coords honest) ---- */
+  function fitBoard() {
+    var area = document.querySelector('.board-area'), board = document.getElementById('board');
+    if (!area || !board || document.getElementById('game-screen').hidden) return;
+    board.style.zoom = '';
+    var st = document.getElementById('status');
+    var availH = area.clientHeight - (st ? st.offsetHeight + 20 : 0) - 12;
+    var availW = area.clientWidth - 16;
+    var w = board.scrollWidth, hgt = board.scrollHeight;
+    if (!w || !hgt) return;
+    var z = Math.min(availW / w, availH / hgt);
+    z = Math.max(0.55, Math.min(2.2, z));
+    board.style.zoom = z.toFixed(3);
+  }
+  Arcade.fitBoard = fitBoard;
+
+
+
   function renderStatus() {
     var slot = document.getElementById('status'); if (!slot) return;
     slot.innerHTML = '';
@@ -632,10 +752,7 @@
     var cur = g.cur;
     var isP1 = cur === 1 || cur === 'X' || cur == null;
     var c = isP1 ? P1 : P2;
-    slot.appendChild(h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } }, [
-      h('span', { style: { width: 12, height: 12, borderRadius: '50%', background: c, boxShadow: '0 0 12px ' + c } }),
-      pill("PLAYER " + (isP1 ? 1 : 2) + "'S TURN", c, true)
-    ]));
+    slot.appendChild(pill("PLAYER " + (isP1 ? 1 : 2) + "'S TURN", c, true));
   }
 
   /* ============================================================
@@ -713,7 +830,7 @@
     setGame: function (u) { S.game = (typeof u === 'function') ? u(S.game) : Object.assign({}, S.game, u); },
     rerender: function () { renderBoard(); renderStatus(); },
     refreshStatus: renderStatus,
-    pill: pill,
+    pill: pill, avatar: avatarFace,
     endRound: endRound, showWin: showWin,
     pushSys: pushSys, pushChat: pushChat,
     hideWaiting: function () { document.getElementById('ov-waiting').hidden = true; document.getElementById('ov-countdown').hidden = true; }
@@ -731,6 +848,7 @@
     buildLobby();
     setMode('local');
 
+    renderSeriesAvatars();
     document.getElementById('root').addEventListener('mousemove', onStarHover);
     document.getElementById('sound-lobby').addEventListener('click', toggleSound);
     document.getElementById('sound-game').addEventListener('click', toggleSound);
@@ -743,9 +861,31 @@
     document.getElementById('chat-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') sendChat(); });
 
     window.addEventListener('resize', setupRunner);
-    window.addEventListener('storage', function (e) { if (e.key === 'arcade_dressup_avatars') renderRoster(); });
+    // the runner path is baked from measured geometry, so rebake whenever that
+    // geometry can still change: webfont swap, and any platform resize
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { setupRunner(); fitBoard(); });
+    if (window.ResizeObserver) {
+      var _ro = new ResizeObserver(function () { setupRunner(); });
+      ['#gd-toggle', '.mode-row', '.bulbs', '.game-grid'].forEach(function (sel) {
+        var el = document.querySelector(sel); if (el) _ro.observe(el);
+      });
+    }
+    window.addEventListener('resize', fitBoard);
+    window.addEventListener('storage', function (e) { if (e.key === 'arcade_dressup_avatars') refreshAvatars(); });
+    window.addEventListener('arcade:avatars', refreshAvatars);
+    window.addEventListener('load', refreshAvatars);
+    setTimeout(refreshAvatars, 0);
     _smokeTimer = setInterval(smokeTick, 55);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        if (_smokeTimer) { clearInterval(_smokeTimer); _smokeTimer = null; }
+        if (_sl && !_sl.paused) { _sl.pause(); _sl.currentTime = 0; }
+      } else if (!_smokeTimer) {
+        _smokeTimer = setInterval(smokeTick, 55);
+      }
+    });
 
+    preloadClips();
     connect();
     setupRunner();
     setTimeout(setupRunner, 200);
@@ -753,7 +893,7 @@
 
   function toggleSound() {
     S.soundOn = !S.soundOn;
-    var ico = S.soundOn ? '🔊' : '🔇', lbl = S.soundOn ? 'SFX ON' : 'SFX OFF';
+    var ico = S.soundOn ? 'ON' : 'OFF', lbl = S.soundOn ? 'SFX ON' : 'SFX OFF';
     document.querySelector('#sound-lobby .sound-ico').textContent = ico;
     document.querySelector('#sound-lobby .sound-label').textContent = lbl;
     document.getElementById('sound-game').textContent = ico;
