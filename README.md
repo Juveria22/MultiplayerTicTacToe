@@ -1,198 +1,144 @@
 <div align="center">
-  <h1>Syncspace</h1>
-  <p><strong>Real-Time Multiplayer Gaming Platform</strong></p>
-
+  <h1>Syncspace Arcade</h1>
+  <p><strong>Real-time multiplayer game platform — 12 head-to-head games, one WebSocket engine</strong></p>
   <p>
-    <a href="#about">About</a> •
-    <a href="#features">Features</a> •
+    <a href="#overview">Overview</a> •
+    <a href="#the-games">Games</a> •
+    <a href="#architecture">Architecture</a> •
+    <a href="#engineering-highlights">Engineering Highlights</a> •
     <a href="#tech-stack">Tech Stack</a> •
-    <a href="#installation">Installation</a> •
-    <a href="#usage">Usage</a>
+    <a href="#running-it-locally">Run Locally</a>
   </p>
 </div>
 
 ---
 
-## About
+## Overview
 
-A web-based multiplayer gaming platform featuring real-time gameplay and communication, wrapped in a neon retro-arcade interface. Built on a WebSocket backend to enable instant, synchronized gameplay between two players with integrated chat.
+Syncspace Arcade is a browser-based arcade where two people can play any of
+**twelve head-to-head games** — either locally on one keyboard or online
+against someone in another browser, matched automatically over WebSockets.
+Every game shares one lobby, one chat channel, and one connection.
 
-## Features
+The interesting problem here wasn't any single game. It was building **one
+engine general enough that twelve very different games — turn-based board
+games, a simultaneous-reveal game, a hidden-information game, a real-time
+physics game, and a shared drawing canvas — all plug into it without
+special-casing the core.** Adding a thirteenth game means writing one file
+and touching nothing else.
 
-**Arcade Lobby**
-- Neon CRT-styled cabinet lobby with animated background
-- Multiple game cabinets to choose from
-- Local and online play modes
-- Hover sparkle effects across the background
+Built with no frameworks and no build step: vanilla JavaScript, a Node
+WebSocket server, and a hand-rolled retro-CRT interface.
 
-**Gameplay**
-- Real-time turn tracking
-- Win and draw detection
-- Game state synchronization across players
+## The Games
 
-**Real-Time Communication**
-- Integrated chat panel
-- Instant message delivery via WebSockets
+| Game | Sync model |
+|---|---|
+| Tic Tac Toe, Connect 4, Checkers, Reversi, Dots & Boxes | Turn-based — server validates each move and broadcasts the authoritative board |
+| RPS Duel | Simultaneous secret picks — server collects both, then broadcasts the reveal |
+| Memory | Server owns the shuffled deck; faces are only revealed as cards are flipped, so neither client can read the board early |
+| Battleship | Hidden information — server holds both fleets through placement and alternating shots |
+| Pong | Authoritative real-time physics on the server; clients send paddle input and render broadcast state |
+| Sugar Rush | Sequential timed rounds — each player plays, reports a score, server compares |
+| Doodle | Real-time shared canvas, strokes relayed as they're drawn |
+| Dress Up | Each player edits only their own character; both figures stay synced |
 
-**Multiplayer Infrastructure**
-- WebSocket-based real-time connections
-- Low-latency gameplay
-- Automatic player matching
+### Hot-seat hidden information
+
+Battleship is the hardest game to run on a single shared screen: both
+fleets are secret, but both players are looking at the same monitor. It is
+handled with an explicit **hand-off flow** — your fleet sits under a cover
+you tap to peek at and tap again to hide, and every shot pauses on a
+`PLAYER n — CONTINUE` screen so the shooter sees their own result (an ✕ for
+a miss, smoke for a hit, the whole ship drawn in red when it sinks) before
+the device changes hands.
+
+## Architecture
+
+```
+client/
+  index.html            markup shell
+  css/style.css         CRT styling, keyframes, responsive cabinet scaling
+  assets/sfx/           bundled audio cues
+  js/
+    main.js             engine: socket, lobby, routing, chat, audio, FX, registry
+    games/*.js          one self-contained module per game
+server/
+  server.js             matchmaking, session state, per-game move handlers
+```
+
+**Client engine (`main.js`).** Owns everything shared: the WebSocket
+connection and reconnect handling, the lobby and screen routing, chat,
+sound, the cursor-driven starfield, and a game registry. Each game calls
+`Arcade.registerGame(id, module)` and implements a small contract —
+`fresh()` for new state, `render(root, api)` to build the board, and
+optionally `status()`, `onServer()`, `start()`/`stop()`.
+
+Games never reach into the engine. They receive an `api` object that hands
+them exactly what they need — current state, player colours, the `send()`
+socket helper, sound cues, avatar rendering, and win handling. This
+inversion is what keeps twelve games from turning into twelve special
+cases, and it's why the local and online code paths in each game differ by
+a single branch: mutate local state, or `send()` and wait for the server's
+answer.
+
+**Server (`server.js`).** Game-agnostic connection queue, matchmaking,
+countdown, chat relay, and disconnect handling, plus one small block per
+game: an id in `GAME_IDS`, session state in `createSession()`, and a
+handler in `MOVE_HANDLERS`. The server is authoritative for anything a
+client shouldn't be trusted with — move legality, Memory's deck,
+Battleship's fleets, and Pong's physics loop.
+
+## Engineering Highlights
+
+- **One protocol, five sync models.** Turn-based validation, simultaneous
+  reveal, hidden information, server-authoritative physics, and continuous
+  stroke relay all ride the same message envelope.
+- **Server-authoritative Pong.** Fixed 800×500 logical field with physics
+  constants mirrored on both sides; clients send input only, so the two
+  browsers can't disagree about where the ball is.
+- **Anti-cheat by construction.** Memory's deck and Battleship's fleets
+  never leave the server until the rules say they should — the information
+  simply isn't in the client to inspect.
+- **Registry-driven UI.** The lobby builds itself from a catalog array;
+  cabinets, accent colours, icons, and marquee type are all data.
+- **Persistent player identity.** The character built in Dress Up is saved
+  to `localStorage` and rendered as the player's avatar in every other
+  game's turn indicators and scoreboards, with a small event bus so all
+  mount points refresh the moment a figure is saved.
+- **Production hygiene.** Audio preloaded on init so the first cue isn't
+  late, all assets bundled locally (no third-party runtime dependencies),
+  and animation timers plus audio suspended on `visibilitychange` to avoid
+  burning CPU in a background tab.
+- **Responsive scaling.** Cabinets scale as a unit — art, type, and
+  controls together via a single CSS custom property — instead of
+  stretching wider on large displays, and the grid keeps an even number of
+  cabinets per row at every breakpoint.
 
 ## Tech Stack
 
-**Frontend**
-- HTML5
-- CSS3
-- JavaScript
+**Frontend** — Vanilla JavaScript (ES5-compatible, no framework, no build
+step), CSS3 (grid, custom properties, clip-path, keyframe animation),
+Press Start 2P + Geist Pixel type, Web Audio via `HTMLAudioElement`,
+Canvas 2D for Pong / Doodle / Sugar Rush.
 
-**Backend**
-- Node.js
-- WebSocket (`ws` library)
+**Backend** — Node.js, `ws` WebSocket library.
 
-**Deployment**
-- Render (Frontend and Backend)
+**Deployment** — Render (static client + Node service).
 
-## Project Structure
-
-```
-neon-arcade/
-├── server/
-│   ├── server.js              # WebSocket server
-│   ├── package.json           # Backend dependencies
-│   └── package-lock.json
-├── client/
-│   ├── index.html             # markup shell + script includes
-│   ├── css/
-│   │   └── style.css          # shared styling + keyframes
-│   └── js/
-│       ├── main.js            # Arcade core: connection, lobby, chat, FX, registry
-│       └── games/
-│           ├── tic-tac-toe.js # ← reference for online wiring
-│           ├── connect-four.js
-│           ├── rps.js
-│           ├── memory.js
-│           └── sugar-rush.js
-├── .gitignore
-└── README.md
-```
-
-One file per game. `main.js` owns everything shared (the WebSocket
-connection, the lobby, screen routing, chat, sound, and the cosmetic
-effects); each game in `js/games/` is self-contained and registers
-itself with the core. Adding or changing a game never touches the others.
-
-### Adding a game
-
-1. Create `client/js/games/my-game.js` and call `Arcade.registerGame('my-game', { … })`.
-2. Add an entry to the `CATALOG` array in `main.js` (id, name, tagline, accent, badge) so a cabinet shows in the lobby.
-3. Include the file in `index.html` after `main.js`.
-
-Each module implements a small contract — `fresh()` (new state),
-`render(root, api)` (build the board), and optionally `status()`,
-`onServer()`, `start()`/`stop()`. The `api` object passed in provides
-everything a game needs (state, colors, sound, the `send()` socket
-helper, win handling) without reaching into the core. The full contract
-is documented at the top of `main.js`.
-
-### Wiring a game to online play
-
-`tic-tac-toe.js` is the simplest reference; `connect-four.js` mirrors it.
-The pattern:
-
-- set `online: true` on the module
-- in your move handler, when `api.mode === 'online'`, call
-  `api.send({ game:'my-game', type:'move', … })` instead of mutating
-  local state
-- implement `onServer(data, api)` to apply the authoritative state the
-  server broadcasts back
-- add a matching handler on the server (see "Server" below)
-
-**Every game now plays online**, each using the model that suits it:
-
-- **Tic-Tac-Toe / Connect Four** — turn-based; the server validates each
-  move and broadcasts the authoritative board.
-- **RPS Duel** — both players pick simultaneously and secretly; the
-  server collects both picks and broadcasts the reveal.
-- **Memory** — the server owns the shuffled deck and validates every
-  flip, so both players see the same layout and faces are only revealed
-  as cards are turned.
-- **Sugar Rush** — sequential rounds: each player plays their timed round
-  and reports their score; the server compares and declares the winner.
-- **Doodle** — a real-time shared drawing canvas relayed by the server.
-
-### Server
-
-`server/server.js` is organised so each game is a small block:
-
-- add the game id to `GAME_IDS`
-- initialise its session state in `createSession()`
-- add a move handler and register it in `MOVE_HANDLERS`
-
-The connection/queue/matchmaking, chat, countdown, and
-disconnect-handling are all shared and game-agnostic.
-
-> **Deploying:** the client points at the WebSocket URL in
-> `client/js/main.js` (`SERVER_URL`). After changing `server.js`,
-> redeploy the server so it speaks the new protocol — older deployments
-> only handle Tic-Tac-Toe and Doodle.
-
-## Installation
-
-### Prerequisites
-
-- Node.js (v14 or higher)
-- npm
-
-### Setup
+## Running It Locally
 
 ```bash
-# Clone the repository
-git clone https://github.com/Juveria22/Syncspace.git
-cd MultiplayerTicTacToe
-
-# Install backend dependencies
-cd server
-npm install
-
-# Start the server
-node server.js
+cd server && npm install && node server.js   # WebSocket server on :8080
+npx http-server client -p 3000               # client
 ```
 
-The server will start running on the configured port (default: 8080).
-
-### Frontend Setup
-
-Open `client/index.html` in your web browser, or serve it using a local server:
-
-```bash
-# Using Python
-python -m http.server 3000
-
-# Using Node.js http-server
-npx http-server client -p 3000
-```
-
-## Usage
-
-1. Open the application in your browser
-2. Pick a game from the arcade lobby
-3. Share the URL with another player
-4. Wait for both players to connect
-5. Start playing and use the chat panel to communicate
-
-## How It Works
-
-The application uses WebSocket connections to maintain real-time, bidirectional communication between the server and clients. When a player makes a move:
-
-1. The client sends the move data to the server
-2. The server validates and broadcasts the move to all connected players
-3. Both clients update their game state simultaneously
-4. Turn tracking ensures proper game flow
+Point `SERVER_URL` in `client/js/main.js` at your server, then open two
+browser windows to play online — or just pick LOCAL mode and hand a friend
+half the keyboard.
 
 ---
 
 <div align="center">
-  <p>Made by <a href="https://github.com/Juveria22">Juveria Amin</a></p>
-  <p>If you enjoyed this project, consider giving it a ⭐</p>
+  <p>Built by <a href="https://github.com/Juveria22">Juveria Amin</a></p>
 </div>
