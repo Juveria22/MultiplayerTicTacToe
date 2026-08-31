@@ -340,12 +340,12 @@ function createSession(player1, player2, game) {
         session.picks = { X: null, O: null };
         session.scores = { X: 0, O: 0 };
     } else if (game === 'memory') {
-        // 8 pairs (0-7) shuffled into 16 positions — authoritative layout
+        // 12 pairs (0-11) shuffled into 24 positions - authoritative layout
         const deck = [];
-        for (let i = 0; i < 8; i++) deck.push(i, i);
+        for (let i = 0; i < 12; i++) deck.push(i, i);
         for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
         session.deck = deck;                 // pair id at each index
-        session.matched = Array(16).fill(false);
+        session.matched = Array(24).fill(false);
         session.flipped = [];                // currently face-up (max 2)
         session.scores = { X: 0, O: 0 };
         session.currentTurn = 'X';
@@ -530,9 +530,9 @@ function handleMemory(session, player, data) {
 }
 function resetMemory(session) {
     const deck = [];
-    for (let i = 0; i < 8; i++) deck.push(i, i);
+    for (let i = 0; i < 12; i++) deck.push(i, i);
     for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
-    session.deck = deck; session.matched = Array(16).fill(false); session.flipped = [];
+    session.deck = deck; session.matched = Array(24).fill(false); session.flipped = [];
     session.scores = { X: 0, O: 0 }; session.currentTurn = 'X'; session.lock = false;
     broadcast(session, { game: 'memory', type: 'restart', currentTurn: 'X', scores: { X: 0, O: 0 } });
 }
