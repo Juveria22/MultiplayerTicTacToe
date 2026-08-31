@@ -1,5 +1,5 @@
 /* ============================================================
-   Battleship — local 2P (hot-seat) + online.
+   Battleship - local 2P (hot-seat) + online.
 
    PLACEMENT : each player lays out a 5-ship fleet on a 10x10
                grid (rotate + click, or RANDOMIZE). Local play
@@ -16,6 +16,8 @@
    ============================================================ */
 (function () {
   var N = 10;
+  var FIRE_CELL = 19; // fire-phase cell size; both panes derive from it so they stay side-by-side
+  var GRID_PAD = 4;
   var ACCENT = '#ff2d9b';
   var SHIPS = [
     { id: 1, size: 5, name: 'CARRIER' },
@@ -97,14 +99,20 @@
         shots: { 1: emptyGrid(), 2: emptyGrid() },
         fleets: { 1: null, 2: null },
         placeIdx: 0, orient: 'H', hover: null,
-        fire: 1, peek: false, lastResult: null, winner: null
+        fire: 1, peek: false, handoff: null, lastResult: null, winner: null
       };
     },
 
     peekFleet: function (api) {
       api.sfx('click');
-      api.setGame(function (s) { return Object.assign({}, s, { peek: true }); });
+      api.setGame(function (s) { return Object.assign({}, s, { peek: !s.peek }); });
       api.rerender();
+    },
+    handoffContinue: function (api) {
+      api.sfx('go');
+      api.setGame(function (s) { return Object.assign({}, s, { fire: s.handoff, handoff: null, peek: false }); });
+      api.rerender();
+      api.refreshStatus();
     },
 
     /* ---- controls invoked from the rendered UI ---- */
@@ -188,11 +196,12 @@
       var sunk = null, win = false;
       if (hit) { var res = registerHit(fleet, board, r, c); sunk = res.sunk; win = allSunk(fleet); }
       api.sfx(hit ? 'place' : 'drop');
-      var next = win ? shooter : (shooter === 1 ? 2 : 1);
+      var next = win ? null : (shooter === 1 ? 2 : 1);
       api.setGame(function (s) {
         var sh = Object.assign({}, s.shots); sh[shooter] = shots;
         var fl = Object.assign({}, s.fleets); fl[target] = fleet;
-        return Object.assign({}, s, { shots: sh, fleets: fl, fire: next, peek: false, lastResult: { by: shooter, r: r, c: c, hit: hit, sunk: sunk }, winner: win ? shooter : null });
+        // the shot stays on screen (and the turn stays put) until this player hands off
+        return Object.assign({}, s, { shots: sh, fleets: fl, handoff: next, lastResult: { by: shooter, r: r, c: c, hit: hit, sunk: sunk }, winner: win ? shooter : null });
       });
       api.rerender();
       if (win) api.endRound(shooter);
@@ -246,7 +255,7 @@
       }
       if (g.phase === 'place') return colorPill(h, api, g.placer, 'PLACE FLEET');
       if (g.phase === 'pass') return null;
-      if (g.phase === 'fire' && !g.winner) return colorPill(h, api, g.fire, 'FIRE!');
+      if (g.phase === 'fire' && !g.winner) return colorPill(h, api, g.fire, g.handoff ? 'SHOT LOGGED' : 'FIRE!');
       return null;
     },
 
@@ -255,10 +264,7 @@
 
   function colorPill(h, api, who, label) {
     var c = who === 1 ? api.P1 : api.P2;
-    return h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } }, [
-      h('span', { style: { width: 12, height: 12, borderRadius: '50%', background: c, boxShadow: '0 0 12px ' + c } }),
-      api.pill('PLAYER ' + who + ' \u2014 ' + label, c, true)
-    ]);
+    return api.pill('PLAYER ' + who + ' - ' + label, c, true);
   }
 
   /* ============================================================
@@ -298,7 +304,7 @@
     return panel(h, [
       label(h, 'PASS THE DEVICE', '#74618f'),
       h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 15, color: c, textShadow: '0 0 16px ' + c, textAlign: 'center', lineHeight: 1.7 } }, 'PLAYER 2'),
-      h('div', { style: { fontSize: 12.5, color: '#9d88ba', textAlign: 'center', maxWidth: 300, lineHeight: 1.6 } }, 'Player 1 has hidden their fleet. Player 2 — take the device and place yours (no peeking!).'),
+      h('div', { style: { fontSize: 12.5, color: '#9d88ba', textAlign: 'center', maxWidth: 300, lineHeight: 1.6 } }, 'Player 1 has hidden their fleet. Player 2 - take the device and place yours (no peeking!).'),
       btn(h, api, 'I\u2019M READY \u25b8', c, Arcade.games['battleship'].passReady)
     ]);
   }
@@ -342,7 +348,7 @@
     });
 
     var controls = waiting
-      ? [label(h, g.oppReady ? 'BOTH FLEETS READY \u2014 STAND BY' : 'WAITING FOR ENEMY FLEET\u2026', '#74618f')]
+      ? [label(h, g.oppReady ? 'BOTH FLEETS READY - STAND BY' : 'WAITING FOR ENEMY FLEET\u2026', '#74618f')]
       : [
           h('div', { style: { display: 'flex', gap: 8 } }, [
             btn(h, api, g.orient === 'H' ? 'ROTATE \u2194' : 'ROTATE \u2195', '#2de2ff', Arcade.games['battleship'].rotate, done),
@@ -371,17 +377,19 @@
       myFleetBoard = g.myBoard; myFleetShots = g.enemyShots;
       canFire = g.myTurn && !g.winner;
       shooterNo = api.mySymbol === 'X' ? 1 : 2; shooterCol = shooterNo === 1 ? api.P1 : api.P2;
+      var targetBoard = null;
     } else {
       var shooter = g.fire, target = shooter === 1 ? 2 : 1;
       targetShots = g.shots[shooter];
       myFleetBoard = g.boards[shooter]; myFleetShots = g.shots[target];
-      canFire = !g.winner;
+      canFire = !g.winner && !g.handoff;
       shooterNo = shooter; shooterCol = shooter === 1 ? api.P1 : api.P2;
+      var targetBoard = g.boards[target];
     }
 
     // target grid: fire here (show only shots, never enemy ships)
     var target = boardGrid(api, {
-      board: null, shots: targetShots, showShips: false,
+      board: targetBoard, shots: targetShots, showShips: false, sunkOnly: true,
       onCell: canFire ? function (r, c) { Arcade.games['battleship'].fireAt(r, c, api); } : null,
       onHover: null, accent: shooterCol, small: true, crosshair: canFire
     });
@@ -394,6 +402,9 @@
     var fleetPane;
     if (!g.net && !g.peek) {
       fleetPane = fleetCover(h, api, shooterNo, myFleetShots);
+    } else if (!g.net) {
+      fleetPane = gridPane(h, 'YOUR FLEET - CLICK TO HIDE', '#2de2ff',
+        h('div', { onClick: function () { Arcade.games['battleship'].peekFleet(api); }, style: { cursor: 'pointer' } }, fleet));
     } else {
       fleetPane = gridPane(h, 'YOUR FLEET', '#2de2ff', fleet);
     }
@@ -402,19 +413,24 @@
     var resTxt = '', resCol = '#9d88ba';
     if (res) {
       if (g.net) {
-        if (res.mine) { resTxt = res.sunk ? 'YOU SANK THEIR ' + res.sunk + '!' : (res.hit ? 'DIRECT HIT!' : 'SPLASH \u2014 MISS'); resCol = res.hit ? '#39ff8b' : '#74618f'; }
+        if (res.mine) { resTxt = res.sunk ? 'YOU SANK THEIR ' + res.sunk + '!' : (res.hit ? 'DIRECT HIT!' : 'SPLASH - MISS'); resCol = res.hit ? '#39ff8b' : '#74618f'; }
         else { resTxt = res.sunk ? 'THEY SANK YOUR ' + res.sunk + '!' : (res.hit ? 'ENEMY HIT YOUR SHIP!' : 'ENEMY MISSED'); resCol = res.hit ? '#ff5a5a' : '#39ff8b'; }
       } else {
         var by = res.by;
-        resTxt = res.sunk ? ('PLAYER ' + by + ' SANK THE ' + res.sunk + '!') : (res.hit ? ('PLAYER ' + by + ' \u2014 HIT!') : ('PLAYER ' + by + ' \u2014 MISS'));
+        resTxt = res.sunk ? ('PLAYER ' + by + ' SANK THE ' + res.sunk + '!') : (res.hit ? ('PLAYER ' + by + ' - HIT!') : ('PLAYER ' + by + ' - MISS'));
         resCol = res.hit ? '#39ff8b' : '#74618f';
       }
     }
 
-    return h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 } }, [
-      h('div', { style: { minHeight: 16, fontFamily: "'Press Start 2P',monospace", fontSize: 9, letterSpacing: 1, color: resCol, textShadow: res && res.hit ? '0 0 10px ' + resCol : 'none' } }, resTxt),
-      h('div', { style: { display: 'flex', gap: 26, alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' } }, [
-        gridPane(h, 'TARGET \u2014 FIRE!', shooterCol, target),
+    // top row: shot result + (local) the handoff control, so it is always in view
+    var topRow = [h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, letterSpacing: 1, color: resCol, textShadow: res && res.hit ? '0 0 10px ' + resCol : 'none' } }, resTxt)];
+    if (!g.net && g.handoff) {
+      topRow.push(btn(h, api, 'PLAYER ' + g.handoff + ' - CONTINUE \u25b8', g.handoff === 1 ? api.P1 : api.P2, Arcade.games['battleship'].handoffContinue));
+    }
+    return h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 } }, [
+      h('div', { style: { minHeight: 18, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center' } }, topRow),
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'nowrap', justifyContent: 'center' } }, [
+        gridPane(h, canFire ? 'TARGET - FIRE!' : 'TARGET', shooterCol, target),
         fleetPane
       ])
     ]);
@@ -425,7 +441,7 @@
     var col = shooterNo === 1 ? api.P1 : api.P2;
     var incoming = 0;
     for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) if (myFleetShots[r][c] === 'H') incoming++;
-    var side = 26 * N + 8; // grid footprint (cell*N + padding)
+    var side = FIRE_CELL * N + GRID_PAD * 2; // matches the grid footprint exactly
     return gridPane(h, 'YOUR FLEET', '#2de2ff',
       h('div', {
         onClick: function () { Arcade.games['battleship'].peekFleet(api); },
@@ -437,9 +453,8 @@
           boxShadow: 'inset 0 0 24px rgba(0,0,0,.7)', transition: '.12s'
         }
       }, [
-        h('div', { style: { fontSize: 30, filter: 'drop-shadow(0 0 8px ' + col + ')' } }, '\uD83D\uDD12'),
-        h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 8.5, letterSpacing: 1, color: col, textShadow: '0 0 8px ' + col, textAlign: 'center', lineHeight: 1.6 } }, 'PLAYER ' + shooterNo + '\u2014 TAP TO'),
-        h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 8.5, letterSpacing: 1, color: col, textShadow: '0 0 8px ' + col, textAlign: 'center' } }, 'VIEW FLEET'),
+        h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 8.5, letterSpacing: 1, color: col, textShadow: '0 0 8px ' + col, textAlign: 'center', lineHeight: 1.6 } }, 'PLAYER ' + shooterNo + ' - CLICK TO'),
+        h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 8.5, letterSpacing: 1, color: col, textShadow: '0 0 8px ' + col, textAlign: 'center' } }, 'REVEAL FLEET'),
         h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 6.5, letterSpacing: .5, color: '#74618f', textAlign: 'center', lineHeight: 1.7, marginTop: 4 } }, incoming ? (incoming + ' HIT' + (incoming > 1 ? 'S' : '') + ' TAKEN') : 'HIDDEN FROM RIVAL')
       ])
     );
@@ -455,7 +470,7 @@
   // opts: { board, shots, showShips, onCell, onHover, preview, previewOK, accent, small, crosshair }
   function boardGrid(api, opts) {
     var h = api.h;
-    var sz = opts.small ? 26 : 30, pad = 4;
+    var sz = opts.small ? FIRE_CELL : 30, pad = GRID_PAD;
     var rows = [];
     for (var r = 0; r < N; r++) {
       var cells = [];
@@ -463,9 +478,10 @@
       rows.push(h('div', { style: { display: 'flex' } }, cells));
     }
     var kids = rows;
-    if (opts.showShips && opts.board) {
+    if ((opts.showShips || opts.sunkOnly) && opts.board) {
       extractShips(opts.board).forEach(function (sp) {
         var sunk = opts.shots ? sp.cells.every(function (p) { return opts.shots[p[0]][p[1]] === 'H'; }) : false;
+        if (opts.sunkOnly && !sunk) return;
         kids = kids.concat(h('div', {
           style: {
             position: 'absolute', pointerEvents: 'none',
@@ -489,8 +505,8 @@
     var interactive = !!opts.onCell;
     var bg = 'rgba(20,40,70,.32)';       // water
     var content = null;
-    if (shot === 'H') { bg = 'rgba(120,20,36,.5)'; content = dot(h, '#ff5a5a', true); }
-    else if (shot === 'M') { content = dot(h, '#5f7290', false); }
+    if (shot === 'H') { bg = 'rgba(120,20,36,.5)'; content = smoke(h, sz); }
+    else if (shot === 'M') { content = missX(h, sz); }
     if (isPrev) bg = opts.previewOK ? 'rgba(57,255,139,.4)' : 'rgba(255,90,90,.4)';
 
     return h('div', {
@@ -505,6 +521,21 @@
         transition: '.08s'
       }
     }, content);
+  }
+  // hit: a smoke puff rising off the water
+  function smoke(h, sz) {
+    return h('div', { style: {
+      width: sz * 0.86, height: sz * 0.86, borderRadius: '50%',
+      background: 'radial-gradient(circle at 50% 62%, rgba(255,196,96,.95) 0 18%, rgba(190,110,80,.8) 34%, rgba(150,146,150,.62) 58%, rgba(150,146,150,0) 78%)',
+      filter: 'blur(.6px)', boxShadow: '0 0 12px rgba(255,140,70,.5)'
+    } });
+  }
+  // miss: pixel X
+  function missX(h, sz) {
+    return h('div', { style: {
+      fontFamily: "'Press Start 2P',monospace", fontSize: sz * 0.44, lineHeight: 1,
+      color: '#6f86a6', opacity: .95, userSelect: 'none'
+    } }, '\u2715');
   }
   function dot(h, color, big) {
     return h('div', { style: {

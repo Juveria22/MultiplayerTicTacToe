@@ -1,5 +1,5 @@
 /* ============================================================
-   Memory — flip two cards; a match keeps your turn and scores.
+   Memory - flip two cards; a match keeps your turn and scores.
    Most pairs when the board clears wins.
 
    LOCAL : the deck is shuffled and owned client-side.
@@ -8,7 +8,7 @@
            revealed by the server as cards are turned over.
    ============================================================ */
 (function () {
-  var FACES = [['★','#ff2d9b'],['♦','#ffb000'],['▲','#2de2ff'],['●','#b14bff'],['♥','#ff5a5a'],['⬢','#39ff8b'],['✦','#ffd24d'],['◆','#7ad1ff']];
+  var FACES = [['★','#ff2d9b'],['♦','#ffb000'],['▲','#2de2ff'],['●','#b14bff'],['♥','#ff5a5a'],['⬢','#39ff8b'],['✦','#ffd24d'],['◆','#7ad1ff'],['■','#ff8a3d'],['▼','#5affd0'],['✚','#c77dff'],['◤','#9fe870']];
   function symNum(s) { return s === 'O' ? 2 : 1; }
 
   Arcade.registerGame('memory', {
@@ -25,7 +25,7 @@
     // online cards are placeholders; faces arrive from the server on reveal
     freshOnline: function () {
       var cards = [];
-      for (var i = 0; i < 16; i++) cards.push({ key: i, pair: null, face: null, flipped: false, matched: false });
+      for (var i = 0; i < 24; i++) cards.push({ key: i, pair: null, face: null, flipped: false, matched: false });
       return { cards: cards, cur: 1, scores: [0, 0], lock: false, winner: null };
     },
 
@@ -148,7 +148,7 @@
           }
         }, show ? face[0] : '?');
       });
-      root.appendChild(h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4,72px)', gap: 10, padding: 16, borderRadius: 16, background: 'rgba(0,0,0,.25)' } }, cards));
+      root.appendChild(h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(6,72px)', gap: 10, padding: 16, borderRadius: 16, background: 'rgba(0,0,0,.25)' } }, cards));
     }
   });
 })();

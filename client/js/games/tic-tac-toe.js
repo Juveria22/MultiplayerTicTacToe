@@ -1,5 +1,5 @@
 /* ============================================================
-   Tic-Tac-Toe — the reference module for ONLINE wiring.
+   Tic-Tac-Toe - the reference module for ONLINE wiring.
 
    LOCAL play  : mutate state here and call api.rerender().
    ONLINE play : send the move to the server and let onServer()

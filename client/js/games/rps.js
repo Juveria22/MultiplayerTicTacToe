@@ -1,12 +1,12 @@
 /* ============================================================
-   RPS Duel — best of five (first to 3).
+   RPS Duel - best of five (first to 3).
 
    LOCAL : hotseat. P1 picks, then P2 picks, then reveal.
    ONLINE: both players pick simultaneously and secretly. The
            server collects both picks and broadcasts the reveal.
    ============================================================ */
 (function () {
-  var GLYPH = { rock: '✊', paper: '✋', scissors: '✌' };
+  var GLYPH = { rock: 'ROCK', paper: 'PAPER', scissors: 'SCISSORS' };
   function symNum(s) { return s === 'O' ? 2 : 1; }
 
   function beat(a, b) { if (a === b) return 0; var win = { rock: 'scissors', paper: 'rock', scissors: 'paper' }; return win[a] === b ? 1 : 2; }
@@ -90,13 +90,13 @@
 
     status: function (g, api) {
       if (api.mode === 'online') {
-        if (g.phase === 'choosing') return api.pill(g.oppReady ? 'OPPONENT READY — PICK!' : 'CHOOSE YOUR MOVE', '#2de2ff', true);
-        if (g.phase === 'locked') return api.pill('LOCKED IN — WAITING…', '#74618f', false);
+        if (g.phase === 'choosing') return api.pill(g.oppReady ? 'OPPONENT READY - PICK!' : 'CHOOSE YOUR MOVE', '#2de2ff', true);
+        if (g.phase === 'locked') return api.pill('LOCKED IN - WAITING…', '#74618f', false);
         if (g.phase === 'reveal') return api.pill('ROUND RESULT', '#2de2ff', true);
         return null;
       }
       if (g.phase === 'reveal') return api.pill('ROUND RESULT', '#2de2ff', true);
-      return api.pill('PLAYER ' + (g.phase === 'pick' ? 1 : 2) + ' — CHOOSE', g.phase === 'pick' ? api.P1 : api.P2, true);
+      return api.pill('PLAYER ' + (g.phase === 'pick' ? 1 : 2) + ' - CHOOSE', g.phase === 'pick' ? api.P1 : api.P2, true);
     },
 
     render: function (root, api) {
@@ -107,12 +107,12 @@
 
       var score = h('div', { style: { display: 'flex', gap: 26, marginBottom: 26, alignItems: 'center', justifyContent: 'center' } }, [
         h('div', { style: { textAlign: 'center' } }, [
-          h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, color: api.P1, marginBottom: 8 } }, p1Label),
+          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 8 } }, [api.avatar(1, 18), h('span', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, color: api.P1 } }, p1Label)]),
           h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 28, color: api.P1, textShadow: '0 0 14px ' + api.P1 } }, String(g.scores[0]))
         ]),
         h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 14, color: '#74618f' } }, 'VS'),
         h('div', { style: { textAlign: 'center' } }, [
-          h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, color: api.P2, marginBottom: 8 } }, p2Label),
+          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 8 } }, [api.avatar(2, 18), h('span', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, color: api.P2 } }, p2Label)]),
           h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 28, color: api.P2, textShadow: '0 0 14px ' + api.P2 } }, String(g.scores[1]))
         ])
       ]);
@@ -131,9 +131,9 @@
         } else { txt = (g.last === 1 ? 'P1 SCORES' : 'P2 SCORES'); tc = g.last === 1 ? api.P1 : api.P2; }
         var kids = [
           h('div', { style: { display: 'flex', gap: 50, alignItems: 'center' } }, [
-            h('div', { style: { fontSize: 78, filter: 'drop-shadow(0 0 16px ' + leftColor + ')', animation: 'popIn .3s' } }, GLYPH[leftPick]),
+            h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 19, color: leftColor, textShadow: '0 0 16px ' + leftColor, filter: 'drop-shadow(0 0 16px ' + leftColor + ')', animation: 'popIn .3s' } }, GLYPH[leftPick]),
             h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 16, color: '#74618f' } }, '×'),
-            h('div', { style: { fontSize: 78, filter: 'drop-shadow(0 0 16px ' + rightColor + ')', animation: 'popIn .3s' } }, GLYPH[rightPick])
+            h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 19, color: rightColor, textShadow: '0 0 16px ' + rightColor, filter: 'drop-shadow(0 0 16px ' + rightColor + ')', animation: 'popIn .3s' } }, GLYPH[rightPick])
           ]),
           h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 15, color: tc, textShadow: '0 0 14px ' + tc } }, txt)
         ];
@@ -142,24 +142,24 @@
         body = h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 } }, kids);
       } else if (online && g.phase === 'locked') {
         body = h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 } }, [
-          h('div', { style: { fontSize: 70, filter: 'drop-shadow(0 0 16px ' + (api.mySymbol === 'X' ? api.P1 : api.P2) + ')' } }, GLYPH[g.myPick]),
+          h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 17, color: (api.mySymbol === 'X' ? api.P1 : api.P2), textShadow: '0 0 16px ' + (api.mySymbol === 'X' ? api.P1 : api.P2) } }, GLYPH[g.myPick]),
           h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 11, color: '#74618f', animation: 'blink 1.2s infinite' } }, 'WAITING FOR OPPONENT…')
         ]);
       } else {
         // choosing (online) OR pick/pick2 (local)
         var who, wc, hint;
-        if (online) { who = null; wc = api.mySymbol === 'X' ? api.P1 : api.P2; hint = 'Pick at the same time — first to 3 wins.'; }
-        else { who = g.phase === 'pick' ? 1 : 2; wc = who === 1 ? api.P1 : api.P2; hint = g.phase === 'pick2' ? 'P1 has locked in. No peeking! 👀' : 'Best of five — first to 3.'; }
+        if (online) { who = null; wc = api.mySymbol === 'X' ? api.P1 : api.P2; hint = 'Pick at the same time - first to 3 wins.'; }
+        else { who = g.phase === 'pick' ? 1 : 2; wc = who === 1 ? api.P1 : api.P2; hint = g.phase === 'pick2' ? 'P1 has locked in. No peeking!' : 'Best of five - first to 3.'; }
         var kids2 = [
-          h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 12, color: wc, textShadow: '0 0 12px ' + wc, animation: 'blink 1.2s infinite' } }, online ? 'CHOOSE YOUR MOVE' : 'PLAYER ' + who + ' — CHOOSE'),
+          h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 12, color: wc, textShadow: '0 0 12px ' + wc, animation: 'blink 1.2s infinite' } }, online ? 'CHOOSE YOUR MOVE' : 'PLAYER ' + who + ' - CHOOSE'),
           h('div', { style: { fontSize: 13, color: '#8c78a8' } }, hint),
-          h('div', { style: { display: 'flex', gap: 18 } }, [['rock', '✊'], ['paper', '✋'], ['scissors', '✌']].map(function (o) {
+          h('div', { style: { display: 'flex', gap: 18 } }, [['rock', 'ROCK'], ['paper', 'PAPER'], ['scissors', 'SCISSORS']].map(function (o) {
             return h('div', {
               onClick: function () { Arcade.games['rps'].pick(o[0], api); },
               onMouseEnter: function () { api.sfx('hover'); },
               onMouseOver: function (e) { e.currentTarget.style.borderColor = wc; e.currentTarget.style.boxShadow = '0 0 20px ' + wc; e.currentTarget.style.transform = 'translateY(-5px)'; },
               onMouseOut: function (e) { e.currentTarget.style.borderColor = wc + '55'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; },
-              style: { cursor: 'pointer', width: 104, height: 104, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, background: 'rgba(8,6,15,.6)', border: '2px solid ' + wc + '55', transition: '.15s' }
+              style: { cursor: 'pointer', width: 104, height: 104, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 8px', fontFamily: "'Press Start 2P',monospace", fontSize: 13, color: wc, background: 'rgba(8,6,15,.6)', border: '2px solid ' + wc + '55', transition: '.15s' }
             }, o[1]);
           }))
         ];

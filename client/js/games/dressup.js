@@ -1,5 +1,5 @@
 /* ============================================================
-   Dress Up — neon stick-figure styling. A chill, no-points game.
+   Dress Up - neon stick-figure styling. A chill, no-points game.
 
    TWO characters. LOCAL 2P: one keyboard, a "⇄ SWITCH" button
    flips which figure you edit. ONLINE: X edits figure 0, O edits
@@ -8,7 +8,7 @@
 
    SLOTS: hair, shirt, pants, shoes, acc(essory). One item per slot
    (pick again to remove). Every slot AND the body has its own color
-   — choose a PAINT target, then tap a neon swatch to recolor it.
+   - choose a PAINT target, then tap a neon swatch to recolor it.
 
    ONLINE PROTOCOL (build the server to match)
    -------------------------------------------
@@ -27,7 +27,10 @@
   // persisted home-screen avatars for P1 / P2 (this device)
   var AV_KEY = 'arcade_dressup_avatars';
   function loadAv() { try { return JSON.parse(localStorage.getItem(AV_KEY)) || [null, null]; } catch (e) { return [null, null]; } }
-  function saveAv(arr) { try { localStorage.setItem(AV_KEY, JSON.stringify(arr)); } catch (e) {} }
+  function saveAv(arr) {
+    try { localStorage.setItem(AV_KEY, JSON.stringify(arr)); } catch (e) {}
+    try { window.dispatchEvent(new Event('arcade:avatars')); } catch (e) {}
+  }
 
   var ITEMS = {
     hair:  [{ v: 'pony', label: 'PONYTAIL' }, { v: 'volume', label: 'VOLUME' }, { v: 'boy', label: 'BOY CUT' }],
@@ -83,6 +86,9 @@
     var bs = ' fill="none" stroke="' + c + '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"';
     var body =
       '<circle cx="60" cy="28" r="13" fill="none" stroke="' + c + '" stroke-width="4"/>' +
+      /* simple face: two eyes + smile */
+      '<circle cx="55" cy="26" r="1.9" fill="' + c + '"/><circle cx="65" cy="26" r="1.9" fill="' + c + '"/>' +
+      '<path d="M57,33 Q60,35.2 63,33" fill="none" stroke="' + c + '" stroke-width="1.8" stroke-linecap="round"/>' +
       '<path d="M60,41 L60,54"' + bs + '/>' +
       '<path d="M60,55 L60,128"' + bs + '/>' +
       '<path d="M60,61 L36,100"' + bs + '/>' +
@@ -98,10 +104,10 @@
     var c = char.body;
     return '<svg viewBox="0 0 120 220" style="display:block;width:100%;height:auto;max-width:' + maxW + 'px;margin:0 auto;filter:drop-shadow(0 0 6px ' + c + '88);overflow:visible">' + figureInner(char) + '</svg>';
   }
-  // fixed-height mini used by the lobby roster
+  // head-only mini used by the lobby roster and in-game avatars
   function miniFigureSVG(char, pxH) {
     var c = char.body;
-    return '<svg viewBox="0 0 120 220" style="display:block;height:' + pxH + 'px;width:auto;filter:drop-shadow(0 0 4px ' + c + '88);overflow:visible">' + figureInner(char) + '</svg>';
+    return '<svg viewBox="36 2 48 50" style="display:block;height:' + pxH + 'px;width:' + pxH + 'px;filter:drop-shadow(0 0 4px ' + c + '88);overflow:hidden">' + figureInner(char) + '</svg>';
   }
 
   /* ---- mini option preview ---- */
@@ -205,10 +211,10 @@
       if (api.mode === 'online') {
         if (api.matchState !== 'playing') return null;
         var c = api.mySymbol === 'O' ? api.P2 : api.P1;
-        return api.pill('● STYLING LIVE — NO RULES, JUST VIBES', c, true);
+        return api.pill('● STYLING LIVE - NO RULES, JUST VIBES', c, true);
       }
       var col = g.active === 0 ? api.P1 : api.P2;
-      return api.pill('EDITING PLAYER ' + (g.active + 1) + ' — ⇄ TO SWAP', col, true);
+      return api.pill('EDITING PLAYER ' + (g.active + 1) + ' - ⇄ TO SWAP', col, true);
     },
 
     render: function (root, api) {
@@ -265,7 +271,7 @@
       var header = h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 } }, [
         h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, color: meCol, textShadow: '0 0 10px ' + meCol, letterSpacing: 1 } }, online ? 'DRESS YOUR FIGURE' : 'DRESSING PLAYER ' + (myIdx + 1)),
         online
-          ? h('div', { style: { fontSize: 11, color: '#8c78a8' } }, 'Partner edits the other — live')
+          ? h('div', { style: { fontSize: 11, color: '#8c78a8' } }, 'Partner edits the other - live')
           : h('div', {
               onClick: function () { self.switchP(api); },
               onMouseEnter: function (e) { api.sfx('hover'); e.currentTarget.style.boxShadow = '0 0 16px ' + meCol; },

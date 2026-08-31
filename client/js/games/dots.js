@@ -1,5 +1,5 @@
 /* ============================================================
-   Dots & Boxes — local 2P + online.
+   Dots & Boxes - local 2P + online.
 
    LOCAL  : rules run client-side; draw an edge, claim any box it
             closes, and if you closed one you move AGAIN.
@@ -136,7 +136,7 @@
         turnCol = mine ? api.P1 : '#74618f'; turnTxt = mine ? '\u25b8 YOUR MOVE' : 'OPPONENT\u2026';
         if (api.matchState !== 'playing') return scoreboard;
       } else {
-        turnCol = g.cur === 'X' ? api.P1 : api.P2; turnTxt = 'PLAYER ' + (g.cur === 'X' ? 1 : 2) + ' \u2014 DRAW';
+        turnCol = g.cur === 'X' ? api.P1 : api.P2; turnTxt = 'PLAYER ' + (g.cur === 'X' ? 1 : 2) + ' - DRAW';
       }
       return h('div', { style: { display: 'flex', alignItems: 'center', gap: 16 } }, [scoreboard, api.pill(turnTxt, turnCol, turnCol !== '#74618f')]);
     },

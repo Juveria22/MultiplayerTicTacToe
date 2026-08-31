@@ -1,5 +1,5 @@
 /* ============================================================
-   PONG — local 2P + online.
+   PONG - local 2P + online.
 
    LOCAL  : full physics runs client-side in a requestAnimationFrame
             loop. P1 = W / S, P2 = ArrowUp / ArrowDown. First to 7.
@@ -11,7 +11,7 @@
 
    Field is a fixed logical 800 x 500 space; the canvas is drawn in
    those units and scaled with CSS. All physics constants match the
-   server (build/server/server.js — pong engine) exactly.
+   server (build/server/server.js - pong engine) exactly.
    ============================================================ */
 (function () {
   var ACCENT = '#2de2ff';
@@ -206,7 +206,7 @@
       return { s1: 0, s2: 0, winner: null };
     },
 
-    // LOCAL only — the core calls start()/stop() for local play.
+    // LOCAL only - the core calls start()/stop() for local play.
     start: function (api) {
       curApi = api; running = true;
       L = freshPhysics();
@@ -264,7 +264,7 @@
       ]);
     },
 
-    // ONLINE — set up here (the core does NOT call start() online).
+    // ONLINE - set up here (the core does NOT call start() online).
     onServer: function (data, api) {
       if (data.game !== 'pong') return;
       curApi = api;

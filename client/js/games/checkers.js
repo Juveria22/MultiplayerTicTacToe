@@ -1,5 +1,5 @@
 /* ============================================================
-   Checkers (English draughts) — local 2P + online.
+   Checkers (English draughts) - local 2P + online.
 
    LOCAL  : rules run client-side; mutate state and rerender.
    ONLINE : the server is authoritative. We send {from,to} steps

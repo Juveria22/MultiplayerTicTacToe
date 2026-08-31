@@ -1,5 +1,5 @@
 /* ============================================================
-   Connect Four — local 2P.
+   Connect Four - local 2P.
    To take it online: set online:true, send {game:'connect-four',
    type:'move', col} when api.mode==='online', and apply the
    server's broadcast in an onServer() handler (mirror tic-tac-toe.js).

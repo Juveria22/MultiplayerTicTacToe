@@ -1,5 +1,5 @@
 /* ============================================================
-   Reversi / Othello — local 2P + online.
+   Reversi / Othello - local 2P + online.
 
    LOCAL  : rules run client-side; place a disc, flip flanked lines.
    ONLINE : the server is authoritative. We send {r,c}; it validates,
@@ -10,7 +10,7 @@
    the opponent's discs bounded by your own disc; every flanked
    disc flips. You MUST play a legal move if one exists; if not,
    your turn is skipped (pass). Game ends when neither side can
-   move — most discs wins (tie possible).
+   move - most discs wins (tie possible).
 
    Cell codes: '' empty | 'X' player-1 (pink) | 'O' player-2 (amber)
    ============================================================ */
@@ -109,7 +109,7 @@
         });
         api.rerender(); api.refreshStatus();
         api.sfx(data.passed ? 'beep' : 'place');
-        if (data.passed && !winner) api.pushSys('No legal move \u2014 turn skipped.');
+        if (data.passed && !winner) api.pushSys('No legal move - turn skipped.');
         if (winner) {
           var mine = winner === api.mySymbol;
           api.sfx(winner === 'Draw' ? 'beep' : (mine ? 'win' : 'lose'));
@@ -132,7 +132,7 @@
         turnCol = mine ? api.P1 : '#74618f'; turnTxt = mine ? '\u25b8 YOUR MOVE' : 'OPPONENT\u2026';
         if (api.matchState !== 'playing') return scoreboard;
       } else {
-        turnCol = g.cur === 'X' ? api.P1 : api.P2; turnTxt = 'PLAYER ' + (g.cur === 'X' ? 1 : 2) + ' \u2014 PLACE';
+        turnCol = g.cur === 'X' ? api.P1 : api.P2; turnTxt = 'PLAYER ' + (g.cur === 'X' ? 1 : 2) + ' - PLACE';
       }
       return h('div', { style: { display: 'flex', alignItems: 'center', gap: 16 } }, [scoreboard, api.pill(turnTxt, turnCol, turnCol !== '#74618f')]);
     },
@@ -222,7 +222,7 @@
       return { board: board, cur: cur, legal: winner ? [] : nextLegal, last: last.at, flipping: last.flipped, winner: winner, passed: passed };
     });
     api.rerender();
-    if (passed) api.pushSys('Player ' + (next === 'X' ? 1 : 2) + ' has no move \u2014 turn skipped.');
+    if (passed) api.pushSys('Player ' + (next === 'X' ? 1 : 2) + ' has no move - turn skipped.');
     if (winner) api.endRound(winner === 'Draw' ? 0 : winner);
   }
 })();

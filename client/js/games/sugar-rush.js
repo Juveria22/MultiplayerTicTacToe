@@ -1,5 +1,5 @@
 /* ============================================================
-   Sugar Rush — local 2P + online, canvas + granular physics.
+   Sugar Rush - local 2P + online, canvas + granular physics.
 
    Each player gets a turn: draw ramps with the mouse to funnel
    falling sugar into the cup before the timer runs out. Most
@@ -11,7 +11,7 @@
    friction give it a granular, non-bouncy feel. Grains rest on ramps,
    blocks, cup walls and the floor.
 
-   VARIETY: every round builds a fresh randomised level —
+   VARIETY: every round builds a fresh randomised level -
      · the spout appears top-left / top-centre / top-right, or as a
        side chute that fires sugar in sideways;
      · the cup changes width, height, position and wall taper;
@@ -39,7 +39,7 @@
     // ----- spout -----
     var spout;
     if (r() < 0.24) {
-      // side chute — fires sugar in from the left, moving right
+      // side chute - fires sugar in from the left, moving right
       spout = { side: true, x: 12, y: 54 + r() * 90, vx: 2.2 + r() * 1.4, drift: 0 };
     } else {
       var spots = [{ x: 66, drift: 24 }, { x: W / 2, drift: 42 }, { x: W - 88, drift: 24 }];
@@ -127,7 +127,7 @@
       p.x = cx + nx * rad; p.y = cy + ny * rad;
       var vn = p.vx * nx + p.vy * ny;
       if (vn < 0) {
-        var e = 0.12;                       // low restitution — sand, not rubber
+        var e = 0.12;                       // low restitution - sand, not rubber
         p.vx -= (1 + e) * vn * nx; p.vy -= (1 + e) * vn * ny;
         p.vx *= 0.84; p.vy *= 0.84;         // tangential friction
       }
@@ -190,7 +190,11 @@
     if (!sg || !g || g.winner || !cv) return;
     var rect = cv.getBoundingClientRect();
     var ct = (e.touches && e.touches[0]) || e;
-    var x = ct.clientX - rect.left, y = ct.clientY - rect.top;
+    // the canvas draws in a fixed logical space but is displayed at a different
+    // CSS size (board auto-fit zoom), so convert screen px -> logical px
+    var sx = rect.width ? cv.width / rect.width : 1;
+    var sy = rect.height ? cv.height / rect.height : 1;
+    var x = (ct.clientX - rect.left) * sx, y = (ct.clientY - rect.top) * sy;
     if (type === 'down') { sg.stroke = [{ x: x, y: y }]; sg.drawing = true; }
     else if (type === 'move') {
       if (!sg.drawing || !sg.stroke) return;
@@ -232,7 +236,7 @@
     // ---- integrate (surface collision during substeps prevents tunneling) ----
     for (var i = 0; i < sg.grains.length; i++) {
       var p = sg.grains[i];
-      p.vy += GR; p.vx *= 0.999;
+      p.vy += GR * 0.62; p.vx *= 0.999;   // gentler gravity - sugar falls slower
       var spd = Math.hypot(p.vx, p.vy);
       if (spd > MAXSPD) { p.vx *= MAXSPD / spd; p.vy *= MAXSPD / spd; spd = MAXSPD; }
       var steps = Math.min(4, Math.max(1, Math.ceil(spd / 2.5)));
@@ -333,11 +337,11 @@
       ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = "18px 'Press Start 2P', monospace"; ctx.textAlign = 'center';
       ctx.fillText('GET READY', W / 2, H / 2 - 8);
       ctx.font = "11px 'Press Start 2P', monospace"; ctx.fillStyle = lineColor;
-      ctx.fillText('P' + g.active + ' — DRAW YOUR RAMPS', W / 2, H / 2 + 20);
+      ctx.fillText('P' + g.active + ' - DRAW YOUR RAMPS', W / 2, H / 2 + 20);
       ctx.textAlign = 'left';
     }
 
-    // ---- HUD sync (update DOM in place — do NOT rebuild) ----
+    // ---- HUD sync (update DOM in place - do NOT rebuild) ----
     if (sg.count !== M.lastCount || timeLeft !== M.lastInt || sg.ink !== M.lastInk) {
       M.lastCount = sg.count; M.lastInt = timeLeft; M.lastInk = sg.ink;
       var fills = api.game.fills.slice(); fills[g.active - 1] = sg.count;
@@ -351,7 +355,17 @@
 
     // ---- phase advance ----
     var filled = sg.count >= g.target;
-    if (armed && (timeLeft <= 0 || filled)) {
+    // once the spout is done, end as soon as all the sugar has come to rest
+    var settled = false;
+    if (armed && timeLeft <= 0) {
+      settled = true;
+      for (var q = 0; q < sg.grains.length; q++) {
+        var gp = sg.grains[q];
+        if (Math.abs(gp.vx) > 0.22 || Math.abs(gp.vy) > 0.22) { settled = false; break; }
+      }
+      if (sg.grains.length === 0) settled = true;
+    }
+    if (armed && (settled || filled)) {
       var f2 = api.game.fills.slice(); f2[g.active - 1] = sg.count;
 
       // ----- ONLINE: report my round, then wait for the server -----
@@ -366,7 +380,7 @@
       // ----- LOCAL: P1 then P2, then compare -----
       if (g.active === 1) {
         api.setGame(Object.assign({}, api.game, { active: 2, phase: 'p2', fills: f2, timeLeft: g.dur, ink: 950 }));
-        beginRound(api, true);   // same level for P2 — keep the match fair
+        beginRound(api, true);   // same level for P2 - keep the match fair
         api.sfx('go'); api.rerender(); api.refreshStatus();
       } else {
         var w = f2[0] === f2[1] ? 0 : (f2[0] > f2[1] ? 1 : 2);
@@ -441,10 +455,10 @@
       if (g.winner) return api.pill('FINISHED', '#74618f', false);
       if (api.mode === 'online') {
         var mineTurn = g.active === myNum(api);
-        return api.pill(mineTurn ? 'YOUR ROUND — FILL UP!' : 'OPPONENT IS PLAYING…', mineTurn ? (myNum(api) === 1 ? api.P1 : api.P2) : '#74618f', mineTurn);
+        return api.pill(mineTurn ? 'YOUR ROUND - FILL UP!' : 'OPPONENT IS PLAYING…', mineTurn ? (myNum(api) === 1 ? api.P1 : api.P2) : '#74618f', mineTurn);
       }
       var sc = g.active === 1 ? api.P1 : api.P2;
-      return api.pill('PLAYER ' + g.active + ' — FILL UP!', sc, true);
+      return api.pill('PLAYER ' + g.active + ' - FILL UP!', sc, true);
     },
 
     render: function (root, api) {
@@ -492,7 +506,7 @@
         style: { width: W + 'px', height: H + 'px', borderRadius: 14, background: 'radial-gradient(120% 120% at 50% 0%, rgba(40,20,60,.6), rgba(8,6,15,.9))', border: '2px solid rgba(255,90,90,.3)', boxShadow: '0 0 30px rgba(255,90,90,.12)', cursor: 'crosshair', touchAction: 'none', display: 'block' }
       });
 
-      var tip = h('div', { style: { width: W + 'px', marginTop: 10, textAlign: 'center', fontSize: 12, color: '#8c78a8', lineHeight: 1.4 } }, 'Drag to draw ramps — funnel the sugar into your cup before the timer runs out. Every round the spout, cup and obstacles change.');
+      var tip = h('div', { style: { width: W + 'px', marginTop: 10, textAlign: 'center', fontSize: 12, color: '#8c78a8', lineHeight: 1.4 } }, 'Drag to draw ramps - funnel the sugar into your cup before the timer runs out. Every round the spout, cup and obstacles change.');
 
       root.appendChild(h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center' } }, [hud, canvas, tip]));
     }

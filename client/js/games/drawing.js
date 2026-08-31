@@ -1,5 +1,5 @@
 /* ============================================================
-   DOODLE — shared drawing canvas. Local + online.
+   DOODLE - shared drawing canvas. Local + online.
 
    LOCAL  : one shared canvas; pick a colour / brush and draw.
    ONLINE : the server relays strokes. Each freehand segment is sent
@@ -8,7 +8,7 @@
             our own strokes immediately and ignore the echo of them,
             applying only the opponent's. CLEAR wipes both canvases.
 
-   No winner — pure co-op. Uses the server's built-in 'drawing' relay
+   No winner - pure co-op. Uses the server's built-in 'drawing' relay
    ({game:'drawing', type:'drawing'|'clear'}), which the live server
    already supports, so online works today.
    ============================================================ */
@@ -199,7 +199,7 @@
 
     status: function (g, api) {
       var h = api.h;
-      var label = api.mode === 'online' ? 'SHARED CANVAS \u2014 LIVE' : 'SHARED CANVAS';
+      var label = api.mode === 'online' ? 'SHARED CANVAS - LIVE' : 'SHARED CANVAS';
       return h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } }, [
         h('span', { style: { width: 12, height: 12, borderRadius: 3, background: ACCENT, boxShadow: '0 0 10px ' + ACCENT } }),
         h('div', { style: { fontFamily: "'Press Start 2P',monospace", fontSize: 10, color: ACCENT, textShadow: '0 0 10px ' + ACCENT, letterSpacing: 1 } }, label)
